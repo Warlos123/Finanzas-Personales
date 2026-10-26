@@ -1,9 +1,18 @@
 """Conexión a SQLite (modo WAL) y migraciones numeradas."""
 
+import os
 import sqlite3
 from pathlib import Path
 
 DIR_MIGRACIONES = Path(__file__).parent / "migrations"
+
+
+def ruta_por_defecto() -> Path:
+    """`$XDG_DATA_HOME/finanzas/finanzas.db` (por defecto `~/.local/share/...`)."""
+    base = os.environ.get("XDG_DATA_HOME")
+    if not base:
+        base = Path.home() / ".local" / "share"
+    return Path(base) / "finanzas" / "finanzas.db"
 
 
 def conectar(ruta) -> sqlite3.Connection:
@@ -44,3 +53,22 @@ def migrar(conn: sqlite3.Connection) -> int:
             raise
         actual = numero
     return actual
+
+
+def leer_ajuste(conn: sqlite3.Connection, clave: str, por_defecto: str | None = None) -> str | None:
+    fila = conn.execute("SELECT valor FROM settings WHERE clave = ?", (clave,)).fetchone()
+    if fila is None:
+        return por_defecto
+    return fila["valor"]
+
+
+def guardar_ajuste(conn: sqlite3.Connection, clave: str, valor) -> None:
+    """Guarda `valor` como texto; `None` borra la clave. No hace commit."""
+    if valor is None:
+        conn.execute("DELETE FROM settings WHERE clave = ?", (clave,))
+        return
+    conn.execute(
+        "INSERT INTO settings (clave, valor) VALUES (?, ?) "
+        "ON CONFLICT (clave) DO UPDATE SET valor = excluded.valor",
+        (clave, str(valor)),
+    )

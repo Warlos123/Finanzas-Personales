@@ -28,3 +28,18 @@ def test_migrar_dos_veces_no_falla(tmp_path):
     assert db.migrar(segunda) == version
     assert version >= 1
     segunda.close()
+
+
+def test_ajustes_guardar_leer_y_borrar(conn):
+    assert db.leer_ajuste(conn, "x") is None
+    assert db.leer_ajuste(conn, "x", "defecto") == "defecto"
+    db.guardar_ajuste(conn, "x", 5)
+    db.guardar_ajuste(conn, "x", 7)
+    assert db.leer_ajuste(conn, "x") == "7"
+    db.guardar_ajuste(conn, "x", None)
+    assert db.leer_ajuste(conn, "x") is None
+
+
+def test_ruta_por_defecto_respeta_xdg(monkeypatch, tmp_path):
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    assert db.ruta_por_defecto() == tmp_path / "finanzas" / "finanzas.db"
