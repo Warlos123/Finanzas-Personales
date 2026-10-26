@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Instala y activa el servicio + timer de usuario que importa cada 5 minutos.
+# Instala y activa las unidades de usuario: importación cada 5 minutos y UI web local.
 set -euo pipefail
 
 repo="$(cd "$(dirname "$0")/.." && pwd)"
@@ -12,9 +12,15 @@ fi
 destino="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 mkdir -p "$destino"
 sed "s|@FINANZAS_BIN@|$bin|" "$repo/systemd/finanzas-importar.service.in" > "$destino/finanzas-importar.service"
+sed "s|@FINANZAS_BIN@|$bin|" "$repo/systemd/finanzas-ui.service.in" > "$destino/finanzas-ui.service"
 cp "$repo/systemd/finanzas-importar.timer" "$destino/finanzas-importar.timer"
 
 systemctl --user daemon-reload
 systemctl --user enable --now finanzas-importar.timer
+systemctl --user enable finanzas-ui.service
+systemctl --user restart finanzas-ui.service
 echo "Timer activo:"
 systemctl --user list-timers finanzas-importar.timer --no-pager
+echo
+echo "UI en http://127.0.0.1:8765. Para el atajo SUPER+CTRL+SHIFT+F agrega a ~/.config/hypr/bindings.conf:"
+echo "bindd = SUPER CTRL SHIFT, F, Finanzas, exec, $repo/scripts/abrir_ui.sh"

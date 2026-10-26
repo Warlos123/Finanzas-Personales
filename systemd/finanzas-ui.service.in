@@ -1,0 +1,9 @@
+[Unit]
+Description=Finanzas: UI web local (solo 127.0.0.1:8765)
+
+[Service]
+ExecStart="@FINANZAS_BIN@" ui
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
