@@ -25,6 +25,12 @@ finanzas/
     sinpe_sms.py       SMS SINPE enviado (4066)
     __init__.py        PARSERS: fuente -> parsear(contenido, recibido_en)
   ingesta.py           registrar_evento, procesar_evento, importar_evento, reprocesar
+  llavero.py           contraseña de Gmail en libsecret vía `secret-tool` (por stdin)
+  notificar.py         notify-send
+  gmail.py             importador IMAP solo lectura + configurar()
+  cli.py, __main__.py  comando `finanzas` (configurar-gmail, importar, reprocesar)
+systemd/               finanzas-importar.service.in + .timer (cada 5 min)
+scripts/instalar_systemd.sh  instala las unidades de usuario con la ruta del venv
 tests/
   fixtures/bcr/*.html  correos sanitizados
   fixtures/sms/*.json  eventos en el esquema JSON del teléfono (schema_version 1)
@@ -42,21 +48,32 @@ tests/
 - **SMS SINPE**: fecha = primeros 8 dígitos del comprobante; hora = `received_at` convertido a hora de CR. `received_at` debe traer offset (si no, error). Descripción sin el relleno de asteriscos; vacía → NULL.
 - **Cuentas** se crean solas: `Tarjeta BCR ****NNNN` por últimos 4 dígitos; una única `SINPE Móvil`. Moneda por defecto CRC.
 - Tipo por defecto de lo importado: `gasto` (las reglas lo ajustarán en la Etapa 2).
+- **Base de datos** por defecto en `$XDG_DATA_HOME/finanzas/finanzas.db` (`~/.local/share/...`); `--db` la cambia.
+- **Llavero**: `secret-tool` (CLI de libsecret) en vez de la librería `keyring`, para no agregar dependencias. Atributos `service=finanzas-gmail usuario=<correo>`. El usuario de Gmail se guarda en `settings.gmail_usuario`.
+- **IMAP**: carpeta con flag `\All` ("Todos", incluye archivados); búsqueda `FROM bcrtarjestcta@bancobcr.com SUBJECT "Transacciones"`. Estado en `settings`: `imap_uidvalidity:<carpeta>` e `imap_ultimo_uid:<carpeta>`. Primera corrida (o UIDVALIDITY nuevo): backfill de 180 días con `SINCE`; `importar --desde AAAA-MM-DD` recorre desde una fecha.
+- **Credenciales rechazadas**: se guarda `settings.gmail_credenciales_invalidas`, se notifica una vez y las corridas siguientes no se conectan hasta correr `configurar-gmail` de nuevo. Errores de red: solo log; el timer reintenta en 5 min.
+- Códigos de salida de `importar`: 0 ok, 1 sin configurar/llavero, 2 credenciales, 3 red/IMAP.
+- Logs a stderr (journald con systemd); solo conteos y UIDs, nunca contenido.
 
 ## Comandos
 
 ```bash
 python -m venv .venv
 .venv/bin/pip install -e '.[dev]'
-.venv/bin/pytest            # todos los tests
+.venv/bin/pytest                                  # todos los tests
+.venv/bin/finanzas configurar-gmail TU@gmail.com  # pide la contraseña de aplicación
+.venv/bin/finanzas importar [--desde 2026-01-01]
+.venv/bin/finanzas reprocesar [--fuente gmail_bcr]
+scripts/instalar_systemd.sh                       # timer cada 5 min
+journalctl --user -u finanzas-importar.service    # logs del importador
 ```
 
-Requiere Python 3.12+. Sin dependencias de runtime por ahora.
+Requiere Python 3.12+. Sin dependencias de Python en runtime. Paquetes del sistema: `libsecret` (`secret-tool`), un proveedor de Secret Service desbloqueado (gnome-keyring) y `libnotify` (`notify-send`).
 
 ## Estado de etapas
 
-- [x] **Etapa 0: Base.** Esquema + migraciones, parsers BCR y SINPE con fixtures, ingesta idempotente y reproceso. 27 tests.
-- [ ] Etapa 1: Importador de Gmail (IMAP, keyring, systemd, CLI de reproceso).
+- [x] **Etapa 0: Base.** Esquema + migraciones, parsers BCR y SINPE con fixtures, ingesta idempotente y reproceso.
+- [~] **Etapa 1: Importador de Gmail.** Implementada (IMAP solo lectura, llavero, systemd, CLI). 47 tests con IMAP simulado. Falta la aceptación en la PC: compras reales de los últimos meses en la base sin duplicados.
 - [ ] Etapa 2: UI de escritorio.
 - [ ] Etapa 3: App Android.
 - [ ] Etapa 4: Importador de eventos del teléfono.
@@ -64,7 +81,7 @@ Requiere Python 3.12+. Sin dependencias de runtime por ahora.
 
 ## Correo BCR real (verificado oct-2026)
 
-- Remitente `bcrtarjestcta@bancobcr.com`, asunto `Notificación de Transacciones BCR`. El mismo remitente manda otros correos (p. ej. "Ahora puede usar Google Pay"): en la Etapa 1 filtrar también por asunto.
+- Remitente `bcrtarjestcta@bancobcr.com`, asunto `Notificación de Transacciones BCR`. El mismo remitente manda otros correos (p. ej. "Ahora puede usar Google Pay"): por eso se filtra también por asunto.
 - Estructura: encabezado de tarjeta en un `div`, tabla con `thead`/`tbody` y `th`. Normalmente una fila por correo. El pie trae un enlace de WhatsApp que repite los datos en la URL (solo atributo, el parser lo ignora). Réplica sanitizada en `tests/fixtures/bcr/una_fila.html`.
 - Montos con coma de miles (`1,614.72`). Hay dos tarjetas en uso (dos cuentas distintas).
 - Algunos comercios de Uber llegan como `UBR PENDING ...` (posible preautorización); revisar en la Etapa 2 si después llega el cargo final.
