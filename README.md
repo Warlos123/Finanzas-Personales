@@ -23,6 +23,16 @@ python -m venv .venv
 scripts/instalar_systemd.sh
 ```
 
+La UI queda en http://127.0.0.1:8765. Para abrirla con **SUPER+CTRL+SHIFT+F**, agrega la línea que
+imprime `scripts/instalar_systemd.sh` a `~/.config/hypr/bindings.conf`.
+
+Para actualizar después de un `git pull`:
+
+```bash
+.venv/bin/pip install -e .
+systemctl --user restart finanzas-ui
+```
+
 Comprobar que no hay duplicados:
 
 ```bash

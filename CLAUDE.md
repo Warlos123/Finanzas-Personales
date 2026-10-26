@@ -6,7 +6,7 @@ App personal de finanzas (un usuario, Costa Rica). Todo local: la PC importa cor
 
 - Trabajar por etapas; al cerrar cada una: resumir, actualizar este archivo y esperar confirmación.
 - Cambios mínimos, commits pequeños. No agregar funciones no pedidas.
-- Estilo: **sin operador ternario** (`x if c else y`) y **bucles `for` indexados** (`for i in range(len(xs))`) en vez de iterar la colección o usar comprehensions.
+- Estilo: **sin operador ternario** (`x if c else y`) y **bucles `for` indexados** (`for i in range(len(xs))`) en vez de iterar la colección o usar comprehensions. Excepción: en plantillas Jinja se usa `{% for x in xs %}` (lo idiomático ahí).
 - Si falta un formato o algo es ambiguo: preguntar antes de inventar.
 - Fixtures siempre sanitizados (datos ficticios). Nada real en el repo.
 - Privacidad: nunca loguear cuerpos de SMS, nombres de destinatarios ni números de teléfono. Los mensajes de `ErrorParseo` y avisos tampoco los incluyen.
@@ -28,9 +28,19 @@ finanzas/
   llavero.py           contraseña de Gmail en libsecret vía `secret-tool` (por stdin)
   notificar.py         notify-send
   gmail.py             importador IMAP solo lectura + configurar()
-  cli.py, __main__.py  comando `finanzas` (configurar-gmail, importar, reprocesar)
-systemd/               finanzas-importar.service.in + .timer (cada 5 min)
+  cli.py, __main__.py  comando `finanzas` (configurar-gmail, importar, reprocesar, ui)
+  reglas.py            reglas de categorización (buscar, aplicar, crear/editar/borrar)
+  movimientos.py       consultas y cambios de transacciones para la UI (filtros, bandeja, edición)
+  recurrentes.py       ingresos recurrentes → un ingreso por mes
+  metricas.py          dashboard mensual
+  catalogos.py         cuentas y categorías
+  formato.py           montos, fechas y meses para mostrar/leer formularios
+  web/app.py           FastAPI: crear_app(ruta_db, puerto); middleware solo-local
+  web/templates/       Jinja2 (macros.html con los <select>)
+  web/static/estilo.css  claro/oscuro según el sistema
+systemd/               finanzas-importar.service.in + .timer (cada 5 min), finanzas-ui.service.in
 scripts/instalar_systemd.sh  instala las unidades de usuario con la ruta del venv
+scripts/abrir_ui.sh    arranca la UI si hace falta y abre `chromium --app` (atajo SUPER+CTRL+SHIFT+F)
 tests/
   fixtures/bcr/*.html  correos sanitizados
   fixtures/sms/*.json  eventos en el esquema JSON del teléfono (schema_version 1)
@@ -54,6 +64,13 @@ tests/
 - **Credenciales rechazadas**: se guarda `settings.gmail_credenciales_invalidas`, se notifica una vez y las corridas siguientes no se conectan hasta correr `configurar-gmail` de nuevo. Errores de red: solo log; el timer reintenta en 5 min.
 - Códigos de salida de `importar`: 0 ok, 1 sin configurar/llavero, 2 credenciales, 3 red/IMAP.
 - Logs a stderr (journald con systemd); solo conteos y UIDs, nunca contenido.
+- **UI**: FastAPI + Jinja2 con formularios HTML y POST→redirect (sin HTMX ni JS de terceros; solo un `onchange` y `confirm()` inline). Puerto 8765, siempre `127.0.0.1`. Middleware: Host debe ser `127.0.0.1:8765`/`localhost:8765` y los POST deben traer Origin local (evita DNS rebinding y CSRF desde otras pestañas). `?volver=` solo acepta rutas internas.
+- **Reglas**: patrón "contiene", sin tildes ni mayúsculas. `comercio` aplica a cuentas no SINPE, `destinatario` a SINPE, `descripcion` a la descripción. Orden por `prioridad` ascendente; gana la primera. Solo tocan transacciones sin categoría, sin `editada_en` y no ignoradas. Se aplican al importar (nuevas) y al crear/editar reglas (todas las candidatas).
+- **Bandeja**: gastos sin categoría + transacciones `pendiente` (no ignoradas), una fila por comercio/destinatario con el conteo de iguales. Las `Negada` quedan fuera (no son transacciones). Categorizar desde la bandeja no marca `editada_en`; la edición completa sí (y entonces el reproceso no la pisa).
+- **Ingresos manuales**: transacción `ingreso` sin llave; la fuente va en `comercio_o_destinatario`; `extraordinario` = 1 para bonos/aguinaldo. Solo las manuales se borran; las importadas se ignoran.
+- **Recurrentes**: llave `recurrente:<id>:<AAAA-MM>`, desde `recurring_incomes.desde`; día 31 → último día del mes. Se generan al abrir el dashboard o Ingresos. "Borrar" uno generado lo deja ignorado (si no, se regeneraría).
+- **Métricas**: todo en CRC. USD se convierte con `settings.tipo_cambio_usd` si existe; si no, se muestra aparte. Transferencias y reembolsables aparte. La comparación con el mes anterior usa la proyección en el mes en curso.
+- **Categorías base** (migración 0002): Comida, Supermercado, Transporte, Servicios, Suscripciones, Salud, Entretenimiento, Otros.
 
 ## Comandos
 
@@ -64,17 +81,20 @@ python -m venv .venv
 .venv/bin/finanzas configurar-gmail TU@gmail.com  # pide la contraseña de aplicación
 .venv/bin/finanzas importar [--desde 2026-01-01]
 .venv/bin/finanzas reprocesar [--fuente gmail_bcr]
-scripts/instalar_systemd.sh                       # timer cada 5 min
+.venv/bin/finanzas ui                             # UI en http://127.0.0.1:8765
+scripts/instalar_systemd.sh                       # timer cada 5 min + servicio de la UI
+scripts/abrir_ui.sh                               # ventana de app (atajo de Hyprland)
+systemctl --user restart finanzas-ui              # tras actualizar el código
 journalctl --user -u finanzas-importar.service    # logs del importador
 ```
 
-Requiere Python 3.12+. Sin dependencias de Python en runtime. Paquetes del sistema: `libsecret` (`secret-tool`), un proveedor de Secret Service desbloqueado (gnome-keyring) y `libnotify` (`notify-send`).
+Requiere Python 3.12+. Dependencias de runtime: fastapi, uvicorn, jinja2, python-multipart (solo para la UI). Dev: pytest, httpx (los tests web se saltan si falta fastapi). Paquetes del sistema: `libsecret` (`secret-tool`), un proveedor de Secret Service desbloqueado (gnome-keyring) y `libnotify` (`notify-send`).
 
 ## Estado de etapas
 
 - [x] **Etapa 0: Base.** Esquema + migraciones, parsers BCR y SINPE con fixtures, ingesta idempotente y reproceso.
 - [x] **Etapa 1: Importador de Gmail.** IMAP solo lectura, llavero, systemd, CLI. 47 tests con IMAP simulado. Aceptada en la PC (26-oct-2026): backfill de 180 días = 561 correos → 466 transacciones aprobadas (425 CRC, 41 USD), 95 correos `Negada`, 0 duplicados, 0 errores; el timer corre cada 5 min.
-- [ ] Etapa 2: UI de escritorio.
+- [~] **Etapa 2: UI de escritorio.** Dashboard, transacciones, bandeja con reglas, ingresos manuales y recurrentes, reglas, cuentas y categorías, tipo de cambio; servicio de usuario y atajo. 75 tests (incluye la aceptación vía UI) y prueba en Chromium. Falta la aceptación en la PC.
 - [ ] Etapa 3: App Android.
 - [ ] Etapa 4: Importador de eventos del teléfono.
 - [ ] Etapa 5: Pulido.
