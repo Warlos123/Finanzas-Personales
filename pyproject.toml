@@ -5,6 +5,9 @@ description = "Finanzas personales automáticas, todo local (PC + Android)"
 requires-python = ">=3.12"
 dependencies = []
 
+[project.scripts]
+finanzas = "finanzas.cli:main"
+
 [project.optional-dependencies]
 dev = ["pytest>=8"]
 
