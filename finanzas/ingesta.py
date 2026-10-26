@@ -4,12 +4,14 @@
 - Una transacción se identifica por `llave_unica`: reprocesar hace upsert.
 - El reproceso no pisa transacciones editadas a mano (`editada_en` no nulo) y nunca
   toca tipo, categoría ni notas; el estado solo cambia si estaba `pendiente`.
+- Las transacciones nuevas pasan por las reglas de categorización.
 """
 
 import hashlib
 import sqlite3
 from dataclasses import dataclass
 
+from finanzas import reglas
 from finanzas.parsers import PARSERS
 from finanzas.parsers.base import ErrorParseo, TransaccionParseada
 from finanzas.tiempo import ahora_iso
@@ -105,6 +107,10 @@ def procesar_evento(conn: sqlite3.Connection, raw_event_id: int) -> ResumenProce
         )
         if existente is None:
             resumen.nuevas += 1
+            nueva = conn.execute(
+                "SELECT id FROM transactions WHERE llave_unica = ?", (tx.llave_unica,)
+            ).fetchone()
+            reglas.aplicar_reglas(conn, [nueva["id"]])
         else:
             resumen.existentes += 1
 
