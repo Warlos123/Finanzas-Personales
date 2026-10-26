@@ -40,7 +40,8 @@ finanzas/
   web/static/estilo.css  claro/oscuro según el sistema
 systemd/               finanzas-importar.service.in + .timer (cada 5 min), finanzas-ui.service.in
 scripts/instalar_systemd.sh  instala las unidades de usuario con la ruta del venv
-scripts/abrir_ui.sh    arranca la UI si hace falta y abre `chromium --app` (atajo SUPER+CTRL+SHIFT+F)
+scripts/abrir_ui.sh    arranca la UI si hace falta y abre `chromium --app` (atajo SUPER+CTRL+SHIFT+F;
+                       Omarchy usa config Lua: `o.bind("SUPER + CTRL + SHIFT + F", "Finanzas", "<repo>/scripts/abrir_ui.sh")`)
 tests/
   fixtures/bcr/*.html  correos sanitizados
   fixtures/sms/*.json  eventos en el esquema JSON del teléfono (schema_version 1)

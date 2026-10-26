@@ -23,8 +23,12 @@ python -m venv .venv
 scripts/instalar_systemd.sh
 ```
 
-La UI queda en http://127.0.0.1:8765. Para abrirla con **SUPER+CTRL+SHIFT+F**, agrega la línea que
-imprime `scripts/instalar_systemd.sh` a `~/.config/hypr/bindings.conf`.
+La UI queda en http://127.0.0.1:8765. Para abrirla con **SUPER+CTRL+SHIFT+F**, agrega a tus bindings
+de Omarchy (configuración Lua de Hyprland) la línea que imprime `scripts/instalar_systemd.sh`:
+
+```lua
+o.bind("SUPER + CTRL + SHIFT + F", "Finanzas", "/ruta/al/repo/scripts/abrir_ui.sh")
+```
 
 Para actualizar después de un `git pull`:
 

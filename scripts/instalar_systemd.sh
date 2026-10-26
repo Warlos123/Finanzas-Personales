@@ -22,5 +22,5 @@ systemctl --user restart finanzas-ui.service
 echo "Timer activo:"
 systemctl --user list-timers finanzas-importar.timer --no-pager
 echo
-echo "UI en http://127.0.0.1:8765. Para el atajo SUPER+CTRL+SHIFT+F agrega a ~/.config/hypr/bindings.conf:"
-echo "bindd = SUPER CTRL SHIFT, F, Finanzas, exec, $repo/scripts/abrir_ui.sh"
+echo "UI en http://127.0.0.1:8765. Para el atajo SUPER+CTRL+SHIFT+F agrega a tus bindings de Omarchy (Lua):"
+echo "o.bind(\"SUPER + CTRL + SHIFT + F\", \"Finanzas\", \"$repo/scripts/abrir_ui.sh\")"
