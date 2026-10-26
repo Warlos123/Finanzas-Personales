@@ -20,5 +20,8 @@ for ((i = 0; i < ${#navegadores[@]}; i++)); do
         exec "${navegadores[i]}" --app="$url"
     fi
 done
-# Sin ninguno: se abre como pestaña en el navegador por defecto.
+# Firefox no tiene modo app: se abre en una ventana aparte.
+if command -v firefox >/dev/null 2>&1; then
+    exec firefox --new-window "$url"
+fi
 exec xdg-open "$url"

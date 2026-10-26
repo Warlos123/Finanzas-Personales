@@ -41,7 +41,8 @@ finanzas/
 systemd/               finanzas-importar.service.in + .timer (cada 5 min), finanzas-ui.service.in
 scripts/instalar_systemd.sh  instala las unidades de usuario con la ruta del venv
 scripts/abrir_ui.sh    arranca la UI si hace falta y la abre con `--app` en el primer navegador Chromium
-                       que exista (chromium, brave, chrome, vivaldi, edge; si no, xdg-open). Atajo SUPER+CTRL+SHIFT+F;
+                       que exista (chromium, brave, chrome, vivaldi, edge); si no, ventana nueva de Firefox (el navegador
+                       de la PC); si no, xdg-open. Atajo SUPER+CTRL+SHIFT+F;
                        Omarchy usa config Lua: `o.bind("SUPER + CTRL + SHIFT + F", "Finanzas", "<repo>/scripts/abrir_ui.sh")`)
 tests/
   fixtures/bcr/*.html  correos sanitizados
@@ -96,7 +97,7 @@ Requiere Python 3.12+. Dependencias de runtime: fastapi, uvicorn, jinja2, python
 
 - [x] **Etapa 0: Base.** Esquema + migraciones, parsers BCR y SINPE con fixtures, ingesta idempotente y reproceso.
 - [x] **Etapa 1: Importador de Gmail.** IMAP solo lectura, llavero, systemd, CLI. 47 tests con IMAP simulado. Aceptada en la PC (26-oct-2026): backfill de 180 días = 561 correos → 466 transacciones aprobadas (425 CRC, 41 USD), 95 correos `Negada`, 0 duplicados, 0 errores; el timer corre cada 5 min.
-- [~] **Etapa 2: UI de escritorio.** Dashboard, transacciones, bandeja con reglas, ingresos manuales y recurrentes, reglas, cuentas y categorías, tipo de cambio; servicio de usuario y atajo. 75 tests (incluye la aceptación vía UI) y prueba en Chromium. Falta la aceptación en la PC.
+- [x] **Etapa 2: UI de escritorio.** Dashboard, transacciones, bandeja con reglas, ingresos manuales y recurrentes, reglas, cuentas y categorías, tipo de cambio; servicio de usuario y atajo. 75 tests (incluye la aceptación vía UI). Aceptada en la PC (26-oct-2026): categorizar un pendiente crea la regla y las iguales quedan categorizadas. Confirmado por el usuario: "extraordinario" como casilla y USD aparte salvo que haya tipo de cambio.
 - [ ] Etapa 3: App Android.
 - [ ] Etapa 4: Importador de eventos del teléfono.
 - [ ] Etapa 5: Pulido.
