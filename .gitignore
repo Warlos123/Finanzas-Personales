@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+build/
+dist/
+
+# Base de datos y backups
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+backups/
+
+# Credenciales y tokens (nunca al repo)
+*.token
+token*.json
+credentials*.json
+client_secret*.json
+.env
+.env.*
+
+# Eventos del teléfono (carpeta Syncthing)
+eventos/
+procesados/
+.stfolder/
+.stversions/
