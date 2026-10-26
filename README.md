@@ -10,7 +10,7 @@ Arquitectura, decisiones y estado del proyecto: ver [`CLAUDE.md`](CLAUDE.md).
 ## Instalación en la PC (Omarchy / Arch)
 
 ```bash
-sudo pacman -S --needed python libsecret libnotify gnome-keyring sqlite
+sudo pacman -S --needed python libsecret libnotify gnome-keyring sqlite python-gobject webkitgtk-6.0
 git clone <este repo> && cd Finanzas-Personales
 python -m venv .venv
 .venv/bin/pip install -e .

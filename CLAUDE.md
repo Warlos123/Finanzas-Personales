@@ -40,9 +40,10 @@ finanzas/
   web/static/estilo.css  claro/oscuro según el sistema
 systemd/               finanzas-importar.service.in + .timer (cada 5 min), finanzas-ui.service.in
 scripts/instalar_systemd.sh  instala las unidades de usuario con la ruta del venv
-scripts/abrir_ui.sh    arranca la UI si hace falta y la abre con `--app` en el primer navegador Chromium
-                       que exista (chromium, brave, chrome, vivaldi, edge); si no, ventana nueva de Firefox (el navegador
-                       de la PC); si no, xdg-open. Atajo SUPER+CTRL+SHIFT+F;
+scripts/abrir_ui.sh    arranca la UI si hace falta y la abre: 1) ventana propia `scripts/ventana.py` (GTK4 +
+                       WebKitGTK, Python del sistema, app_id `cr.finanzas.Finanzas`, una sola instancia);
+                       2) `--app` en un navegador Chromium; 3) ventana nueva de Firefox; 4) xdg-open.
+                       La PC usa Firefox y la opción 1 (elegida por el usuario). Atajo SUPER+CTRL+SHIFT+F;
                        Omarchy usa config Lua: `o.bind("SUPER + CTRL + SHIFT + F", "Finanzas", "<repo>/scripts/abrir_ui.sh")`)
 tests/
   fixtures/bcr/*.html  correos sanitizados
@@ -91,7 +92,7 @@ systemctl --user restart finanzas-ui              # tras actualizar el código
 journalctl --user -u finanzas-importar.service    # logs del importador
 ```
 
-Requiere Python 3.12+. Dependencias de runtime: fastapi, uvicorn, jinja2, python-multipart (solo para la UI). Dev: pytest, httpx (los tests web se saltan si falta fastapi). Paquetes del sistema: `libsecret` (`secret-tool`), un proveedor de Secret Service desbloqueado (gnome-keyring) y `libnotify` (`notify-send`).
+Requiere Python 3.12+. Dependencias de runtime: fastapi, uvicorn, jinja2, python-multipart (solo para la UI). Dev: pytest, httpx (los tests web se saltan si falta fastapi). Paquetes del sistema: `libsecret` (`secret-tool`), un proveedor de Secret Service desbloqueado (gnome-keyring), `libnotify` (`notify-send`) y, para la ventana propia, `python-gobject` + `webkitgtk-6.0`.
 
 ## Estado de etapas
 
