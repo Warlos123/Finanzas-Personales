@@ -43,7 +43,7 @@ scripts/instalar_systemd.sh  instala las unidades de usuario con la ruta del ven
 scripts/abrir_ui.sh    arranca la UI si hace falta y la abre: 1) ventana propia `scripts/ventana.py` (GTK4 +
                        WebKitGTK, Python del sistema, app_id `cr.finanzas.Finanzas`, una sola instancia);
                        2) `--app` en un navegador Chromium; 3) ventana nueva de Firefox; 4) xdg-open.
-                       La PC usa Firefox y la opción 1 (elegida por el usuario). Atajo SUPER+CTRL+SHIFT+F;
+                       La PC usa Firefox y la opción 1 (elegida por el usuario, funciona). Atajo SUPER+CTRL+SHIFT+F;
                        Omarchy usa config Lua: `o.bind("SUPER + CTRL + SHIFT + F", "Finanzas", "<repo>/scripts/abrir_ui.sh")`)
 tests/
   fixtures/bcr/*.html  correos sanitizados
