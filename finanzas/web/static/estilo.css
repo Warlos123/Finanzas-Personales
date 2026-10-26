@@ -1,0 +1,130 @@
+:root {
+  --fondo: #f6f6f4;
+  --superficie: #ffffff;
+  --texto: #1d1d1b;
+  --tenue: #6b6b66;
+  --borde: #dcdcd6;
+  --acento: #2f6f5e;
+  --negativo: #b4412f;
+  --alerta: #a3700b;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #16171a;
+    --superficie: #1f2125;
+    --texto: #e6e6e3;
+    --tenue: #9a9a95;
+    --borde: #33353a;
+    --acento: #6cc4a8;
+    --negativo: #ef8a78;
+    --alerta: #e2b04a;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font: 15px/1.45 system-ui, sans-serif;
+}
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 16px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+nav a {
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: var(--texto);
+  text-decoration: none;
+}
+nav a.activo { background: var(--acento); color: var(--superficie); }
+main { padding: 16px; max-width: 1200px; margin: 0 auto; }
+h1 { font-size: 1.4em; margin: 0.6em 0; }
+h2 { font-size: 1.1em; margin: 1.2em 0 0.4em; }
+a { color: var(--acento); }
+
+.aviso, .error { padding: 8px 12px; border-radius: 6px; border: 1px solid var(--borde); }
+.aviso { border-color: var(--acento); }
+.error { border-color: var(--negativo); color: var(--negativo); }
+.tenue { color: var(--tenue); }
+.negativo { color: var(--negativo); }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.etiqueta {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  border: 1px solid var(--borde);
+  color: var(--tenue);
+}
+.etiqueta.alerta { border-color: var(--alerta); color: var(--alerta); }
+
+header.mes { display: flex; align-items: center; gap: 16px; }
+header.mes a { text-decoration: none; font-size: 1.3em; }
+
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+}
+.tarjeta span { color: var(--tenue); font-size: 0.9em; }
+.tarjeta strong { font-size: 1.3em; font-variant-numeric: tabular-nums; }
+.tarjeta small { color: var(--tenue); }
+
+.columnas { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; }
+table { border-collapse: collapse; width: 100%; }
+td, th { padding: 4px 6px; text-align: left; vertical-align: middle; }
+table.lista { background: var(--superficie); border: 1px solid var(--borde); border-radius: 8px; }
+table.lista th { border-bottom: 1px solid var(--borde); color: var(--tenue); font-weight: normal; }
+table.lista tr + tr td { border-top: 1px solid var(--borde); }
+tr.ignorada td { opacity: 0.5; }
+tr.pendiente td { color: var(--alerta); }
+td.barra { width: 40%; }
+td.barra span { display: block; height: 10px; border-radius: 3px; background: var(--acento); min-width: 2px; }
+
+form.filtros, form.ficha { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 12px; }
+form.ficha { flex-direction: column; align-items: stretch; max-width: 420px; }
+label { display: flex; flex-direction: column; gap: 2px; font-size: 0.9em; color: var(--tenue); }
+label.check { flex-direction: row; align-items: center; gap: 6px; }
+input, select, button {
+  font: inherit;
+  color: var(--texto);
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+button { background: var(--acento); color: var(--superficie); border-color: var(--acento); cursor: pointer; }
+button.secundario { background: transparent; color: var(--acento); }
+button.peligro { background: transparent; color: var(--negativo); border-color: var(--negativo); }
+
+form.pendiente {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+}
+form.pendiente .detalle { flex: 1 1 260px; }
+table.lista td input:not([type=checkbox]), table.lista td select { width: 100%; min-width: 4em; }
+table.lista td input[type=number] { max-width: 6em; }
+table.lista td button { margin: 1px 0; }

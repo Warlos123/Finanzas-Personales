@@ -82,6 +82,18 @@ def _cmd_reprocesar(args) -> int:
     return 0
 
 
+def _cmd_ui(args) -> int:
+    import uvicorn
+
+    from finanzas.web.app import crear_app
+
+    ruta = Path(args.db)
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    # Siempre solo en 127.0.0.1: la UI no debe ser accesible desde la red.
+    uvicorn.run(crear_app(ruta, args.puerto), host="127.0.0.1", port=args.puerto, log_level="warning")
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="finanzas", description="Finanzas personales (local)")
     parser.add_argument(
@@ -106,6 +118,10 @@ def main(argv=None) -> int:
     reprocesar = comandos.add_parser("reprocesar", help="volver a parsear todos los eventos crudos")
     reprocesar.add_argument("--fuente", choices=["gmail_bcr", "sms_4066"])
     reprocesar.set_defaults(funcion=_cmd_reprocesar)
+
+    ui = comandos.add_parser("ui", help="servir la UI web en http://127.0.0.1:PUERTO")
+    ui.add_argument("--puerto", type=int, default=8765)
+    ui.set_defaults(funcion=_cmd_ui)
 
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")

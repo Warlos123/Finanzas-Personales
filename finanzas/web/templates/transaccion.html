@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "macros.html" import opciones, opciones_categoria, opciones_cuenta %}
+{% block titulo %}Finanzas · Transacción{% endblock %}
+{% block contenido %}
+<p><a href="{{ volver }}">← Volver</a></p>
+<h1>{{ t.comercio_o_destinatario or "Transacción" }}</h1>
+<p class="tenue">
+  {% if t.llave_unica %}Origen: {{ t.llave_unica.split(":")[0] }}{% else %}Manual{% endif %}
+  · creada {{ t.creada_en | fecha_corta }}{% if t.editada_en %} · editada {{ t.editada_en | fecha_corta }}{% endif %}
+</p>
+<form method="post" class="ficha">
+  <label>Fecha y hora <input type="datetime-local" name="fecha" value="{{ t.fecha_hora | fecha_form }}" required></label>
+  <label>Monto <input name="monto" value="{{ t.monto_centimos | centimos_texto }}" required></label>
+  <label>Moneda <select name="moneda">{{ opciones(monedas, t.moneda) }}</select></label>
+  <label>Tipo <select name="tipo">{{ opciones(tipos, t.tipo) }}</select></label>
+  <label>Categoría <select name="categoria_id">{{ opciones_categoria(categorias, t.categoria_id, "Sin categoría") }}</select></label>
+  <label>Cuenta <select name="cuenta_id">{{ opciones_cuenta(cuentas, t.cuenta_id) }}</select></label>
+  <label>Comercio / destinatario / fuente <input name="comercio" value="{{ t.comercio_o_destinatario or '' }}"></label>
+  {% if t.descripcion %}<p>Descripción: {{ t.descripcion }}</p>{% endif %}
+  <label>Nota <input name="notas" value="{{ t.notas or '' }}"></label>
+  <label>Estado <select name="estado">{{ opciones(estados, t.estado) }}</select></label>
+  <label class="check"><input type="checkbox" name="extraordinario" value="1"{% if t.extraordinario %} checked{% endif %}> Ingreso extraordinario</label>
+  <button>Guardar</button>
+</form>
+<p class="tenue">Guardar marca la transacción como editada: reprocesar los correos o SMS ya no cambiará estos valores.</p>
+{% if not t.raw_event_id %}
+<form method="post" action="/transacciones/{{ t.id }}/borrar" onsubmit="return confirm('¿Borrar esta transacción?')">
+  <button class="peligro">Borrar</button>
+</form>
+{% endif %}
+{% endblock %}

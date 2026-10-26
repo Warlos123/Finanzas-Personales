@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "macros.html" import opciones, opciones_categoria, opciones_cuenta %}
+{% block titulo %}Finanzas · Transacciones{% endblock %}
+{% block contenido %}
+<h1>Transacciones</h1>
+<form method="get" class="filtros">
+  <label>Mes <input type="month" name="mes" value="{{ f.mes or '' }}"></label>
+  <label>Cuenta <select name="cuenta">
+    <option value="">Todas</option>
+    {% for c in cuentas %}<option value="{{ c.id }}"{% if c.id == f.cuenta_id %} selected{% endif %}>{{ c.nombre }}</option>{% endfor %}
+  </select></label>
+  <label>Categoría <select name="categoria">
+    <option value="">Todas</option>
+    <option value="sin"{% if f.categoria == "sin" %} selected{% endif %}>Sin categoría</option>
+    {% for c in categorias %}<option value="{{ c.id }}"{% if c.id|string == f.categoria %} selected{% endif %}>{{ c.nombre_completo }}</option>{% endfor %}
+  </select></label>
+  <label>Tipo <select name="tipo">
+    <option value="">Todos</option>
+    {% for t in tipos %}<option value="{{ t }}"{% if t == f.tipo %} selected{% endif %}>{{ t }}</option>{% endfor %}
+  </select></label>
+  <label>Texto <input type="search" name="q" value="{{ f.texto or '' }}"></label>
+  <label class="check"><input type="checkbox" name="ignoradas" value="1"{% if f.incluir_ignoradas %} checked{% endif %}> Incluir ignoradas</label>
+  <button>Filtrar</button>
+</form>
+
+<p class="tenue">{{ filas | length }} transacciones{% if not f.mes %} (todas las fechas, máximo 1000){% endif %}.</p>
+<table class="lista">
+  <thead><tr><th>Fecha</th><th>Cuenta</th><th>Comercio / destinatario</th><th>Descripción</th><th>Categoría</th><th>Tipo</th><th class="num">Monto</th><th></th></tr></thead>
+  <tbody>
+  {% for t in filas %}
+    <tr class="{{ t.estado }}">
+      <td>{{ t.fecha_hora | fecha_corta }}</td>
+      <td>{{ t.cuenta_nombre or "—" }}</td>
+      <td>{{ t.comercio_o_destinatario or "—" }}</td>
+      <td>{{ t.descripcion or "" }}{% if t.notas %} <span class="tenue">({{ t.notas }})</span>{% endif %}</td>
+      <td>{{ t.categoria_nombre or "—" }}</td>
+      <td>{{ t.tipo }}{% if t.estado != "confirmada" %} <span class="etiqueta">{{ t.estado }}</span>{% endif %}</td>
+      <td class="num">{{ t.monto_centimos | monto(t.moneda) }}</td>
+      <td><a href="/transacciones/{{ t.id }}">editar</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

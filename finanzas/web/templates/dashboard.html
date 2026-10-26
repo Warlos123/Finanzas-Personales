@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "macros.html" import opciones, opciones_categoria, opciones_cuenta %}
+{% block titulo %}Finanzas · {{ r.mes | nombre_mes }}{% endblock %}
+{% block contenido %}
+<header class="mes">
+  <a href="/?mes={{ anterior }}">←</a>
+  <h1>{{ r.mes | nombre_mes }}</h1>
+  <a href="/?mes={{ siguiente }}">→</a>
+</header>
+
+<section class="tarjetas">
+  <div class="tarjeta"><span>Gasto</span><strong>{{ r.gasto | monto }}</strong></div>
+  <div class="tarjeta"><span>Ingresos</span><strong>{{ r.ingresos | monto }}</strong>
+    {% if r.ingresos_extraordinarios %}<small>incluye {{ r.ingresos_extraordinarios | monto }} extraordinarios</small>{% endif %}</div>
+  <div class="tarjeta"><span>Balance</span><strong class="{% if r.balance < 0 %}negativo{% endif %}">{{ r.balance | monto }}</strong></div>
+  <div class="tarjeta"><span>Tasa de ahorro</span><strong>{{ r.tasa_ahorro | porcentaje }}</strong></div>
+  <div class="tarjeta"><span>Promedio diario</span><strong>{{ r.promedio_diario | monto }}</strong>
+    <small>{{ r.dias_transcurridos }} de {{ r.dias_mes }} días</small></div>
+  <div class="tarjeta"><span>{% if r.es_mes_actual %}Proyección fin de mes{% else %}Gasto del mes{% endif %}</span><strong>{{ r.proyeccion | monto }}</strong></div>
+</section>
+
+<p>
+  Mes anterior: gasto {{ r.gasto_anterior | monto }}, ingresos {{ r.ingresos_anterior | monto }}.
+  {% if r.variacion_gasto is not none %}
+  {% if r.es_mes_actual %}Proyección{% else %}Gasto{% endif %} vs. mes anterior:
+  <strong class="{% if r.variacion_gasto > 0 %}negativo{% endif %}">{% if r.variacion_gasto > 0 %}+{% endif %}{{ r.variacion_gasto | porcentaje }}</strong>
+  {% endif %}
+</p>
+<p class="tenue">
+  Aparte (no cuentan como gasto): transferencias {{ r.transferencias | monto }} · reembolsables (me deben) {{ r.reembolsables | monto }}.
+  {% if r.usd_gasto_sin_convertir or r.usd_ingresos_sin_convertir %}
+  <br>En dólares sin convertir: gasto {{ r.usd_gasto_sin_convertir | monto("USD") }}, ingresos {{ r.usd_ingresos_sin_convertir | monto("USD") }}.
+  <a href="/cuentas">Define un tipo de cambio</a> para incluirlos.
+  {% endif %}
+  {% if pendientes %}<br><a href="/bandeja">{{ pendientes }} transacciones por revisar</a>.{% endif %}
+</p>
+
+<div class="columnas">
+<section>
+  <h2>Por categoría</h2>
+  <table>
+  {% for nombre, valor, parte in r.por_categoria %}
+    <tr>
+      <td>{{ nombre }}</td>
+      <td class="barra"><span style="width: {{ (parte * 100) | round(1) }}%"></span></td>
+      <td class="num">{{ valor | monto }}</td>
+      <td class="num tenue">{{ parte | porcentaje }}</td>
+    </tr>
+  {% else %}
+    <tr><td class="tenue">Sin gastos este mes.</td></tr>
+  {% endfor %}
+  </table>
+</section>
+<section>
+  <h2>Top comercios</h2>
+  <table>
+  {% for nombre, valor, cantidad in r.top_comercios %}
+    <tr><td>{{ nombre }}</td><td class="num tenue">{{ cantidad }}×</td><td class="num">{{ valor | monto }}</td></tr>
+  {% endfor %}
+  </table>
+  <h2>Top destinatarios SINPE</h2>
+  <table>
+  {% for nombre, valor, cantidad in r.top_destinatarios %}
+    <tr><td>{{ nombre }}</td><td class="num tenue">{{ cantidad }}×</td><td class="num">{{ valor | monto }}</td></tr>
+  {% else %}
+    <tr><td class="tenue">Sin SINPE este mes.</td></tr>
+  {% endfor %}
+  </table>
+</section>
+</div>
+{% endblock %}

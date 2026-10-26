@@ -1,0 +1,15 @@
+{# Macros para <select>. Importar con: {% from "macros.html" import ... %} #}
+{% macro opciones_categoria(categorias, seleccion, vacia) -%}
+<option value="">{{ vacia }}</option>
+{% for c in categorias %}<option value="{{ c.id }}"{% if c.id == seleccion %} selected{% endif %}>{{ c.nombre_completo }}</option>
+{% endfor %}
+{%- endmacro -%}
+{% macro opciones(valores, seleccion) -%}
+{% for v in valores %}<option value="{{ v }}"{% if v == seleccion %} selected{% endif %}>{{ v }}</option>
+{% endfor %}
+{%- endmacro -%}
+{% macro opciones_cuenta(cuentas, seleccion) -%}
+<option value="">—</option>
+{% for c in cuentas %}<option value="{{ c.id }}"{% if c.id == seleccion %} selected{% endif %}>{{ c.nombre }}</option>
+{% endfor %}
+{%- endmacro -%}

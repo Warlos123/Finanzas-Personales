@@ -1,0 +1,27 @@
+{% macro enlace(url, texto, clave) -%}
+<a href="{{ url }}"{% if seccion == clave %} class="activo"{% endif %}>{{ texto }}</a>
+{%- endmacro -%}
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}Finanzas{% endblock %}</title>
+<link rel="stylesheet" href="/static/estilo.css">
+</head>
+<body>
+<nav>
+  {{ enlace("/", "Dashboard", "dashboard") }}
+  {{ enlace("/transacciones", "Transacciones", "transacciones") }}
+  {% if pendientes %}{{ enlace("/bandeja", "Bandeja (" ~ pendientes ~ ")", "bandeja") }}{% else %}{{ enlace("/bandeja", "Bandeja", "bandeja") }}{% endif %}
+  {{ enlace("/ingresos", "Ingresos", "ingresos") }}
+  {{ enlace("/reglas", "Reglas", "reglas") }}
+  {{ enlace("/cuentas", "Cuentas y categorías", "cuentas") }}
+</nav>
+<main>
+{% if msg %}<p class="aviso">{{ msg }}</p>{% endif %}
+{% if error %}<p class="error">{{ error }}</p>{% endif %}
+{% block contenido %}{% endblock %}
+</main>
+</body>
+</html>

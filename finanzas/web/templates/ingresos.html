@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "macros.html" import opciones, opciones_categoria, opciones_cuenta %}
+{% block titulo %}Finanzas · Ingresos{% endblock %}
+{% block contenido %}
+<header class="mes">
+  <a href="/ingresos?mes={{ anterior }}">←</a>
+  <h1>Ingresos · {{ mes | nombre_mes }}</h1>
+  <a href="/ingresos?mes={{ siguiente }}">→</a>
+</header>
+
+<table class="lista">
+  <thead><tr><th>Fecha</th><th>Fuente</th><th>Cuenta</th><th>Nota</th><th class="num">Monto</th><th></th></tr></thead>
+  {% for t in filas %}
+  <tr class="{{ t.estado }}">
+    <td>{{ t.fecha_hora | fecha_corta }}</td>
+    <td>{{ t.comercio_o_destinatario or "—" }}{% if t.extraordinario %} <span class="etiqueta">extraordinario</span>{% endif %}{% if t.llave_unica and t.llave_unica.startswith("recurrente:") %} <span class="etiqueta">recurrente</span>{% endif %}</td>
+    <td>{{ t.cuenta_nombre or "—" }}</td>
+    <td>{{ t.notas or "" }}</td>
+    <td class="num">{{ t.monto_centimos | monto(t.moneda) }}</td>
+    <td><a href="/transacciones/{{ t.id }}?volver=/ingresos?mes={{ mes }}">editar</a></td>
+  </tr>
+  {% else %}
+  <tr><td class="tenue" colspan="6">Sin ingresos este mes.</td></tr>
+  {% endfor %}
+</table>
+
+<h2>Agregar ingreso</h2>
+<form method="post" action="/ingresos" class="ficha">
+  <label>Fecha <input type="date" name="fecha" value="{{ hoy }}" required></label>
+  <label>Monto <input name="monto" placeholder="450,000.00" required></label>
+  <label>Moneda <select name="moneda">{{ opciones(monedas, "CRC") }}</select></label>
+  <label>Fuente <input name="comercio" placeholder="p. ej. SINPE de Juan, salario" required></label>
+  <label>Cuenta <select name="cuenta_id">{{ opciones_cuenta(cuentas, None) }}</select></label>
+  <label>Nota <input name="notas"></label>
+  <label class="check"><input type="checkbox" name="extraordinario" value="1"> Extraordinario (aguinaldo, bono, venta…)</label>
+  <button>Agregar</button>
+</form>
+
+<h2>Ingresos recurrentes</h2>
+<p class="tenue">Generan un ingreso cada mes en el día indicado (desde la fecha "Desde"). Los generados se pueden editar; borrarlos los deja ignorados.</p>
+<table class="lista">
+  <thead><tr><th>Nombre</th><th>Monto</th><th>Moneda</th><th>Día</th><th>Cuenta</th><th>Desde</th><th>Activo</th><th></th></tr></thead>
+  {% for r in recurrentes %}
+  <tr>
+    <td><form id="rec-{{ r.id }}" method="post" action="/recurrentes/{{ r.id }}"></form>
+        <input form="rec-{{ r.id }}" name="nombre" value="{{ r.nombre }}" required></td>
+    <td><input form="rec-{{ r.id }}" name="monto" value="{{ r.monto_centimos | centimos_texto }}" size="10" required></td>
+    <td><select form="rec-{{ r.id }}" name="moneda">{{ opciones(monedas, r.moneda) }}</select></td>
+    <td><input form="rec-{{ r.id }}" name="dia" type="number" min="1" max="31" value="{{ r.dia_del_mes }}" required></td>
+    <td><select form="rec-{{ r.id }}" name="cuenta_id">{{ opciones_cuenta(cuentas, r.cuenta_id) }}</select></td>
+    <td><input form="rec-{{ r.id }}" name="desde" type="date" value="{{ r.desde or '' }}"></td>
+    <td><input form="rec-{{ r.id }}" name="activa" type="checkbox" value="1"{% if r.activa %} checked{% endif %}></td>
+    <td><button form="rec-{{ r.id }}">Guardar</button>
+        <button form="rec-{{ r.id }}" formaction="/recurrentes/{{ r.id }}/borrar" class="peligro" onclick="return confirm('¿Borrar este recurrente?')">Borrar</button></td>
+  </tr>
+  {% endfor %}
+  <tr>
+    <td><form id="rec-nuevo" method="post" action="/recurrentes"></form>
+        <input form="rec-nuevo" name="nombre" placeholder="Salario" required></td>
+    <td><input form="rec-nuevo" name="monto" size="10" placeholder="0.00" required></td>
+    <td><select form="rec-nuevo" name="moneda">{{ opciones(monedas, "CRC") }}</select></td>
+    <td><input form="rec-nuevo" name="dia" type="number" min="1" max="31" value="1" required></td>
+    <td><select form="rec-nuevo" name="cuenta_id">{{ opciones_cuenta(cuentas, None) }}</select></td>
+    <td><input form="rec-nuevo" name="desde" type="date" value="{{ hoy }}"></td>
+    <td><input form="rec-nuevo" name="activa" type="checkbox" value="1" checked></td>
+    <td><button form="rec-nuevo">Agregar</button></td>
+  </tr>
+</table>
+{% endblock %}

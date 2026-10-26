@@ -82,3 +82,20 @@ def mes_desplazado(mes: str, delta: int) -> str:
 def rango_mes(mes: str) -> tuple[str, str]:
     """Límites para comparar con `fecha_hora` ISO: fecha_hora >= inicio AND fecha_hora < fin."""
     return mes, mes_desplazado(mes, 1)
+
+
+_NOMBRES_MES = (
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+)
+
+
+def nombre_mes(mes: str) -> str:
+    """'2026-10' -> 'octubre 2026'."""
+    return f"{_NOMBRES_MES[int(mes[5:]) - 1]} {mes[:4]}"
+
+
+def porcentaje(valor: float | None) -> str:
+    if valor is None:
+        return "—"
+    return f"{valor * 100:.0f}%"

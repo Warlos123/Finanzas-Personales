@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% from "macros.html" import opciones, opciones_categoria, opciones_cuenta %}
+{% block titulo %}Finanzas · Cuentas y categorías{% endblock %}
+{% block contenido %}
+<h1>Cuentas</h1>
+<table class="lista">
+  <thead><tr><th>Nombre</th><th>Tipo</th><th>Últimos 4</th><th>Moneda</th><th></th></tr></thead>
+  {% for c in cuentas %}
+  <tr>
+    <td><form id="cuenta-{{ c.id }}" method="post" action="/cuentas/{{ c.id }}"></form>
+        <input form="cuenta-{{ c.id }}" name="nombre" value="{{ c.nombre }}" required></td>
+    <td><select form="cuenta-{{ c.id }}" name="tipo">{{ opciones(tipos_cuenta, c.tipo) }}</select></td>
+    <td><input form="cuenta-{{ c.id }}" name="ultimos4" value="{{ c.ultimos4 or '' }}" size="4" maxlength="4"></td>
+    <td><select form="cuenta-{{ c.id }}" name="moneda">{{ opciones(monedas, c.moneda) }}</select></td>
+    <td><button form="cuenta-{{ c.id }}">Guardar</button></td>
+  </tr>
+  {% endfor %}
+  <tr>
+    <td><form id="cuenta-nueva" method="post" action="/cuentas"></form>
+        <input form="cuenta-nueva" name="nombre" placeholder="Efectivo" required></td>
+    <td><select form="cuenta-nueva" name="tipo">{{ opciones(tipos_cuenta, "efectivo") }}</select></td>
+    <td><input form="cuenta-nueva" name="ultimos4" size="4" maxlength="4"></td>
+    <td><select form="cuenta-nueva" name="moneda">{{ opciones(monedas, "CRC") }}</select></td>
+    <td><button form="cuenta-nueva">Agregar</button></td>
+  </tr>
+</table>
+
+<h1>Categorías</h1>
+<table class="lista">
+  <thead><tr><th>Nombre</th><th>Dentro de</th><th></th></tr></thead>
+  {% for c in categorias %}
+  <tr>
+    <td><form id="cat-{{ c.id }}" method="post" action="/categorias/{{ c.id }}"></form>
+        <input form="cat-{{ c.id }}" name="nombre" value="{{ c.nombre }}" required></td>
+    <td><select form="cat-{{ c.id }}" name="padre_id">{{ opciones_categoria(categorias, c.padre_id, "—") }}</select></td>
+    <td><button form="cat-{{ c.id }}">Guardar</button>
+        <button form="cat-{{ c.id }}" formaction="/categorias/{{ c.id }}/borrar" class="peligro" onclick="return confirm('¿Borrar la categoría? Sus transacciones vuelven a la bandeja.')">Borrar</button></td>
+  </tr>
+  {% endfor %}
+  <tr>
+    <td><form id="cat-nueva" method="post" action="/categorias"></form>
+        <input form="cat-nueva" name="nombre" placeholder="Nueva categoría" required></td>
+    <td><select form="cat-nueva" name="padre_id">{{ opciones_categoria(categorias, None, "—") }}</select></td>
+    <td><button form="cat-nueva">Agregar</button></td>
+  </tr>
+</table>
+
+<h1>Tipo de cambio</h1>
+<form method="post" action="/ajustes/tipo-cambio" class="ficha">
+  <label>Colones por dólar <input name="tipo_cambio" value="{{ tipo_cambio }}" placeholder="505.50"></label>
+  <button>Guardar</button>
+</form>
+<p class="tenue">Si está definido, los gastos e ingresos en dólares se convierten a colones en el dashboard. Vacío = se muestran aparte.</p>
+{% endblock %}

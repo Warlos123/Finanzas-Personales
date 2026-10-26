@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "macros.html" import opciones, opciones_categoria, opciones_cuenta %}
+{% block titulo %}Finanzas · Bandeja{% endblock %}
+{% block contenido %}
+<h1>Bandeja de pendientes</h1>
+<p class="tenue">Gastos sin categoría (agrupados por comercio o destinatario) y transacciones con moneda desconocida.
+Al guardar con "crear regla", se categorizan también las demás iguales y las que lleguen después.</p>
+
+{% for t in filas %}
+{% set campo = campos[loop.index0] %}
+<form method="post" action="/bandeja/{{ t.id }}" class="pendiente">
+  <div class="detalle">
+    <strong>{{ t.comercio_o_destinatario or "—" }}</strong>
+    {% if t.iguales > 1 %}<span class="etiqueta">{{ t.iguales }} iguales</span>{% endif %}
+    {% if t.estado == "pendiente" %}<span class="etiqueta alerta">moneda desconocida</span>{% endif %}
+    <br><span class="tenue">{{ t.fecha_hora | fecha_corta }} · {{ t.cuenta_nombre or "—" }}{% if t.descripcion %} · {{ t.descripcion }}{% endif %}</span>
+  </div>
+  <div class="num">{{ t.monto_centimos | monto(t.moneda) }}</div>
+  <select name="categoria_id">{{ opciones_categoria(categorias, None, "Categoría…") }}</select>
+  <select name="tipo">{{ opciones(tipos, t.tipo) }}</select>
+  <label class="check"><input type="checkbox" name="crear_regla" value="1" checked> Regla por</label>
+  <select name="campo" onchange="this.form.patron.value = this.selectedOptions[0].dataset.patron">
+    <option value="{{ campo }}" data-patron="{{ t.comercio_o_destinatario or '' }}">{{ campo }}</option>
+    {% if t.descripcion %}<option value="descripcion" data-patron="{{ t.descripcion }}">descripción</option>{% endif %}
+  </select>
+  <input name="patron" value="{{ t.comercio_o_destinatario or '' }}" size="18" title="La regla aplica si el texto contiene esto">
+  <button>Guardar</button>
+  <button formaction="/bandeja/{{ t.id }}/ignorar" class="secundario">Ignorar</button>
+  <a href="/transacciones/{{ t.id }}?volver=/bandeja">editar</a>
+</form>
+{% else %}
+<p>No hay transacciones pendientes. 🎉</p>
+{% endfor %}
+
+{% if errores %}
+<h2>Eventos que no se pudieron interpretar ({{ errores | length }})</h2>
+<table class="lista">
+  <thead><tr><th>Fuente</th><th>Recibido</th><th>Detalle</th></tr></thead>
+  {% for e in errores %}
+  <tr><td>{{ e.fuente }}</td><td>{{ e.recibido_en | fecha_corta }}</td><td>{{ e.detalle_parseo }}</td></tr>
+  {% endfor %}
+</table>
+<form method="post" action="/reprocesar"><button>Reprocesar todo</button></form>
+<p class="tenue">Úsalo después de actualizar un parser.</p>
+{% endif %}
+{% endblock %}

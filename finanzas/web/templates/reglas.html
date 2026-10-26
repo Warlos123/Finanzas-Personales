@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "macros.html" import opciones, opciones_categoria, opciones_cuenta %}
+{% block titulo %}Finanzas · Reglas{% endblock %}
+{% block contenido %}
+<h1>Reglas</h1>
+<p class="tenue">Se evalúan de menor a mayor prioridad y gana la primera que coincide. El patrón coincide si el campo
+<em>contiene</em> ese texto (sin importar tildes ni mayúsculas). "comercio" aplica a tarjeta, "destinatario" a SINPE.
+Solo actúan sobre transacciones sin categoría y sin edición manual.</p>
+
+<table class="lista">
+  <thead><tr><th>Prioridad</th><th>Campo</th><th>Patrón</th><th>Categoría</th><th>Forzar tipo</th><th></th></tr></thead>
+  {% for r in filas %}
+  <tr>
+    <td><form id="regla-{{ r.id }}" method="post" action="/reglas/{{ r.id }}"></form>
+        <input form="regla-{{ r.id }}" name="prioridad" type="number" value="{{ r.prioridad }}" style="width: 5em"></td>
+    <td><select form="regla-{{ r.id }}" name="campo">{{ opciones(campos, r.campo) }}</select></td>
+    <td><input form="regla-{{ r.id }}" name="patron" value="{{ r.patron }}" required></td>
+    <td><select form="regla-{{ r.id }}" name="categoria_id">{{ opciones_categoria(categorias, r.categoria_id, "—") }}</select></td>
+    <td><select form="regla-{{ r.id }}" name="tipo_forzado"><option value="">—</option>{{ opciones(tipos, r.tipo_forzado) }}</select></td>
+    <td><button form="regla-{{ r.id }}">Guardar</button>
+        <button form="regla-{{ r.id }}" formaction="/reglas/{{ r.id }}/borrar" class="peligro" onclick="return confirm('¿Borrar esta regla?')">Borrar</button></td>
+  </tr>
+  {% endfor %}
+  <tr>
+    <td><form id="regla-nueva" method="post" action="/reglas"></form>
+        <input form="regla-nueva" name="prioridad" type="number" placeholder="al final" style="width: 5em"></td>
+    <td><select form="regla-nueva" name="campo">{{ opciones(campos, "comercio") }}</select></td>
+    <td><input form="regla-nueva" name="patron" placeholder="UBER" required></td>
+    <td><select form="regla-nueva" name="categoria_id">{{ opciones_categoria(categorias, None, "—") }}</select></td>
+    <td><select form="regla-nueva" name="tipo_forzado"><option value="">—</option>{{ opciones(tipos, None) }}</select></td>
+    <td><button form="regla-nueva">Agregar</button></td>
+  </tr>
+</table>
+<form method="post" action="/reglas/aplicar"><button class="secundario">Aplicar reglas a transacciones sin categoría</button></form>
+{% endblock %}
