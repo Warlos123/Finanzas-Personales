@@ -86,6 +86,18 @@ def aplicar_reglas(conn: sqlite3.Connection, transaccion_ids: list[int] | None =
     return cambiadas
 
 
+def _validar(campo: str, patron: str, categoria_id: int | None, tipo_forzado: str | None) -> str:
+    """Devuelve el patrón limpio o lanza ValueError."""
+    patron = patron.strip()
+    if campo not in CAMPOS:
+        raise ValueError("Campo de regla inválido")
+    if patron == "":
+        raise ValueError("El patrón no puede estar vacío")
+    if categoria_id is None and tipo_forzado is None:
+        raise ValueError("La regla necesita una categoría o un tipo")
+    return patron
+
+
 def crear_regla(
     conn: sqlite3.Connection,
     campo: str,
@@ -95,13 +107,7 @@ def crear_regla(
     prioridad: int | None = None,
 ) -> int:
     """Crea una regla al final del orden (si no se da prioridad). No hace commit."""
-    patron = patron.strip()
-    if campo not in CAMPOS:
-        raise ValueError("Campo de regla inválido")
-    if patron == "":
-        raise ValueError("El patrón no puede estar vacío")
-    if categoria_id is None and tipo_forzado is None:
-        raise ValueError("La regla necesita una categoría o un tipo")
+    patron = _validar(campo, patron, categoria_id, tipo_forzado)
     if prioridad is None:
         maxima = conn.execute("SELECT MAX(prioridad) FROM rules").fetchone()[0]
         prioridad = 10
@@ -112,3 +118,25 @@ def crear_regla(
         (campo, patron, categoria_id, tipo_forzado, prioridad),
     )
     return cursor.lastrowid
+
+
+def actualizar_regla(
+    conn: sqlite3.Connection,
+    regla_id: int,
+    campo: str,
+    patron: str,
+    categoria_id: int | None,
+    tipo_forzado: str | None,
+    prioridad: int,
+) -> None:
+    """No reaplica sobre transacciones ya categorizadas. No hace commit."""
+    patron = _validar(campo, patron, categoria_id, tipo_forzado)
+    conn.execute(
+        "UPDATE rules SET campo = ?, patron = ?, categoria_id = ?, tipo_forzado = ?, prioridad = ? "
+        "WHERE id = ?",
+        (campo, patron, categoria_id, tipo_forzado, prioridad, regla_id),
+    )
+
+
+def borrar_regla(conn: sqlite3.Connection, regla_id: int) -> None:
+    conn.execute("DELETE FROM rules WHERE id = ?", (regla_id,))

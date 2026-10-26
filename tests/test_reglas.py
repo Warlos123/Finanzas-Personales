@@ -100,3 +100,16 @@ def test_regla_invalida(conn):
         reglas.crear_regla(conn, "comercio", "X", None)
     with pytest.raises(ValueError):
         reglas.crear_regla(conn, "otro", "X", 1)
+
+
+def test_actualizar_y_borrar_regla(conn):
+    with conn:
+        regla = reglas.crear_regla(conn, "comercio", "SODA", _categoria(conn, "Comida"))
+        reglas.actualizar_regla(conn, regla, "descripcion", " almuerzo ", None, "reembolsable", 5)
+    fila = conn.execute("SELECT * FROM rules WHERE id = ?", (regla,)).fetchone()
+    assert (fila["campo"], fila["patron"], fila["tipo_forzado"], fila["prioridad"]) == (
+        "descripcion", "almuerzo", "reembolsable", 5,
+    )
+    with conn:
+        reglas.borrar_regla(conn, regla)
+    assert conn.execute("SELECT COUNT(*) FROM rules").fetchone()[0] == 0
