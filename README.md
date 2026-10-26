@@ -6,6 +6,7 @@ Aplicación para llevar control de finanzas por medio de notificaciones del BCR 
 - Android (Kotlin): captura los SMS del 4066 y los deja en una carpeta sincronizada con Syncthing.
 
 Arquitectura, decisiones y estado del proyecto: ver [`CLAUDE.md`](CLAUDE.md).
+Instalación de la app del teléfono: ver [`android/README.md`](android/README.md).
 
 ## Instalación en la PC (Omarchy / Arch)
 

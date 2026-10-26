@@ -45,6 +45,15 @@ scripts/abrir_ui.sh    arranca la UI si hace falta y la abre: 1) ventana propia 
                        2) `--app` en un navegador Chromium; 3) ventana nueva de Firefox; 4) xdg-open.
                        La PC usa Firefox y la opción 1 (elegida por el usuario, funciona). Atajo SUPER+CTRL+SHIFT+F;
                        Omarchy usa config Lua: `o.bind("SUPER + CTRL + SHIFT + F", "Finanzas", "<repo>/scripts/abrir_ui.sh")`)
+android/               app Kotlin mínima (ver android/README.md)
+  app/src/main/java/cr/finanzas/sms/
+    Sms4066.kt         reglas puras: remitente, comprobante, fecha ISO, JSON (probadas en la JVM)
+    ReceptorSms.kt     BroadcastReceiver SMS_RECEIVED (protegido con BROADCAST_SMS)
+    Entrega.kt         escribe <comprobante>.json por SAF; si falla, cola + WorkManager
+    Cola.kt            SQLite local: pendientes (con cuerpo) y exportados (solo ids)
+    TrabajoReintento.kt  Worker con backoff exponencial
+    Backfill.kt        bandeja de entrada del 4066
+    MainActivity.kt    pantalla única (carpeta, permisos, último, pendientes, backfill, batería)
 tests/
   fixtures/bcr/*.html  correos sanitizados
   fixtures/sms/*.json  eventos en el esquema JSON del teléfono (schema_version 1)
@@ -74,6 +83,8 @@ tests/
 - **Ingresos manuales**: transacción `ingreso` sin llave; la fuente va en `comercio_o_destinatario`; `extraordinario` = 1 para bonos/aguinaldo. Solo las manuales se borran; las importadas se ignoran.
 - **Recurrentes**: llave `recurrente:<id>:<AAAA-MM>`, desde `recurring_incomes.desde`; día 31 → último día del mes. Se generan al abrir el dashboard o Ingresos. "Borrar" uno generado lo deja ignorado (si no, se regeneraría).
 - **Métricas**: todo en CRC. USD se convierte con `settings.tipo_cambio_usd` si existe; si no, se muestra aparte. Transferencias y reembolsables aparte. La comparación con el mes anterior usa la proyección en el mes en curso.
+- **Android**: Kotlin sin AppCompat ni Compose (Activity del framework + XML); dependencias: documentfile y work-runtime. minSdk 31, targetSdk 35. Sin permiso INTERNET. Solo exporta SMS entrantes del 4066 que traen `Comprobante <dígitos>`; los demás se descartan sin guardarse. `received_at` = hora de llegada al teléfono (en vivo `currentTimeMillis`, en backfill la columna `date` de la bandeja). Intenta escribir directo y, si falla, cola + WorkManager (`vaciar-cola`, KEEP, backoff 30 s). La tabla `exportados` evita archivos duplicados aunque la PC mueva los JSON. Firma desde `android/firma.properties` (fuera de git).
+- **Compilar Android** requiere `dl.google.com` (SDK y también `maven.google.com`, que redirige ahí). Las pruebas de `Sms4066.kt` se pueden correr en la JVM sin el SDK.
 - **Categorías base** (migración 0002): Comida, Supermercado, Transporte, Servicios, Suscripciones, Salud, Entretenimiento, Otros.
 
 ## Comandos
@@ -99,7 +110,7 @@ Requiere Python 3.12+. Dependencias de runtime: fastapi, uvicorn, jinja2, python
 - [x] **Etapa 0: Base.** Esquema + migraciones, parsers BCR y SINPE con fixtures, ingesta idempotente y reproceso.
 - [x] **Etapa 1: Importador de Gmail.** IMAP solo lectura, llavero, systemd, CLI. 47 tests con IMAP simulado. Aceptada en la PC (26-oct-2026): backfill de 180 días = 561 correos → 466 transacciones aprobadas (425 CRC, 41 USD), 95 correos `Negada`, 0 duplicados, 0 errores; el timer corre cada 5 min.
 - [x] **Etapa 2: UI de escritorio.** Dashboard, transacciones, bandeja con reglas, ingresos manuales y recurrentes, reglas, cuentas y categorías, tipo de cambio; servicio de usuario y atajo. 75 tests (incluye la aceptación vía UI). Aceptada en la PC (26-oct-2026): categorizar un pendiente crea la regla y las iguales quedan categorizadas. Confirmado por el usuario: "extraordinario" como casilla y USD aparte salvo que haya tipo de cambio.
-- [ ] Etapa 3: App Android.
+- [~] **Etapa 3: App Android.** Código completo en `android/`; lógica pura probada en la JVM (5 pruebas) y su JSON verificado con el parser de la PC. Falta compilar (bloqueado: `dl.google.com` no está permitido en el entorno), decidir dónde vive la llave de firma y la aceptación en el Fold.
 - [ ] Etapa 4: Importador de eventos del teléfono.
 - [ ] Etapa 5: Pulido.
 

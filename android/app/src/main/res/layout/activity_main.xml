@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            style="@android:style/TextAppearance.DeviceDefault.Large"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name" />
+
+        <TextView
+            style="@style/Titulo"
+            android:text="Carpeta de Syncthing" />
+        <TextView
+            android:id="@+id/textoCarpeta"
+            style="@style/Detalle" />
+        <Button
+            android:id="@+id/botonCarpeta"
+            style="@style/Boton"
+            android:text="Elegir carpeta" />
+
+        <TextView
+            style="@style/Titulo"
+            android:text="Permisos de SMS" />
+        <TextView
+            android:id="@+id/textoPermisos"
+            style="@style/Detalle" />
+        <Button
+            android:id="@+id/botonPermisos"
+            style="@style/Boton"
+            android:text="Conceder permisos" />
+        <Button
+            android:id="@+id/botonAjustesApp"
+            style="@style/Boton"
+            android:text="Abrir ajustes de la app" />
+
+        <TextView
+            style="@style/Titulo"
+            android:text="Último evento enviado" />
+        <TextView
+            android:id="@+id/textoUltimo"
+            style="@style/Detalle" />
+
+        <TextView
+            style="@style/Titulo"
+            android:text="Eventos pendientes" />
+        <TextView
+            android:id="@+id/textoPendientes"
+            style="@style/Detalle" />
+        <Button
+            android:id="@+id/botonReintentar"
+            style="@style/Boton"
+            android:text="Reintentar ahora" />
+
+        <TextView
+            style="@style/Titulo"
+            android:text="SMS antiguos" />
+        <TextView
+            android:id="@+id/textoBackfill"
+            style="@style/Detalle"
+            android:text="Exporta los SMS del 4066 que ya están en el teléfono." />
+        <Button
+            android:id="@+id/botonBackfill"
+            style="@style/Boton"
+            android:text="Backfill de SMS antiguos" />
+
+        <TextView
+            style="@style/Titulo"
+            android:text="Batería" />
+        <TextView
+            android:id="@+id/textoBateria"
+            style="@style/Detalle" />
+        <Button
+            android:id="@+id/botonBateria"
+            style="@style/Boton"
+            android:text="Quitar optimización de batería" />
+    </LinearLayout>
+</ScrollView>

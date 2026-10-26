@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sobre (SMS) blanco en la zona segura del ícono adaptable. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M32,38h44a2,2 0 0 1 2,2v28a2,2 0 0 1 -2,2h-44a2,2 0 0 1 -2,-2v-28a2,2 0 0 1 2,-2z" />
+    <path
+        android:strokeColor="#2F6F5E"
+        android:strokeWidth="4"
+        android:strokeLineJoin="round"
+        android:pathData="M32,41L54,57L76,41" />
+</vector>
