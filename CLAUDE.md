@@ -73,7 +73,7 @@ Requiere Python 3.12+. Sin dependencias de Python en runtime. Paquetes del siste
 ## Estado de etapas
 
 - [x] **Etapa 0: Base.** Esquema + migraciones, parsers BCR y SINPE con fixtures, ingesta idempotente y reproceso.
-- [~] **Etapa 1: Importador de Gmail.** Implementada (IMAP solo lectura, llavero, systemd, CLI). 47 tests con IMAP simulado. Falta la aceptación en la PC: compras reales de los últimos meses en la base sin duplicados.
+- [x] **Etapa 1: Importador de Gmail.** IMAP solo lectura, llavero, systemd, CLI. 47 tests con IMAP simulado. Aceptada en la PC (26-oct-2026): backfill de 180 días = 561 correos → 466 transacciones aprobadas (425 CRC, 41 USD), 95 correos `Negada`, 0 duplicados, 0 errores; el timer corre cada 5 min.
 - [ ] Etapa 2: UI de escritorio.
 - [ ] Etapa 3: App Android.
 - [ ] Etapa 4: Importador de eventos del teléfono.
@@ -84,4 +84,5 @@ Requiere Python 3.12+. Sin dependencias de Python en runtime. Paquetes del siste
 - Remitente `bcrtarjestcta@bancobcr.com`, asunto `Notificación de Transacciones BCR`. El mismo remitente manda otros correos (p. ej. "Ahora puede usar Google Pay"): por eso se filtra también por asunto.
 - Estructura: encabezado de tarjeta en un `div`, tabla con `thead`/`tbody` y `th`. Normalmente una fila por correo. El pie trae un enlace de WhatsApp que repite los datos en la URL (solo atributo, el parser lo ignora). Réplica sanitizada en `tests/fixtures/bcr/una_fila.html`.
 - Montos con coma de miles (`1,614.72`). Hay dos tarjetas en uso (dos cuentas distintas).
+- Estados vistos: `Aprobada` y `Negada` (~17% de los correos). Las negadas quedan solo en `raw_events` (`con_avisos`).
 - Algunos comercios de Uber llegan como `UBR PENDING ...` (posible preautorización); revisar en la Etapa 2 si después llega el cargo final.
