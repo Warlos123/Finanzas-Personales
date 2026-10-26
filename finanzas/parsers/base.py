@@ -60,10 +60,10 @@ def monto_a_centimos(texto: str) -> int:
 
 
 def detectar_moneda(texto: str) -> str | None:
-    """'COLON COSTA RICA', 'Colones' -> CRC; textos con 'dolar' -> USD; otro -> None."""
+    """'COLON COSTA RICA', 'Colones' -> CRC; 'US DOLLAR', 'Dólares' -> USD; otro -> None."""
     normalizado = normalizar(texto)
     if "colon" in normalizado:
         return "CRC"
-    if "dolar" in normalizado:
+    if "dollar" in normalizado or "dolar" in normalizado:
         return "USD"
     return None

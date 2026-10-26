@@ -38,7 +38,7 @@ tests/
 - **Deduplicación**: `raw_events` UNIQUE(fuente, hash sha256). `transactions.llave_unica` UNIQUE con prefijo: `bcr:<autorizacion>:<no_referencia>`, `sinpe:<comprobante>`. Manuales: NULL.
 - **Reproceso** = upsert por `llave_unica`. No pisa transacciones con `editada_en`; nunca toca tipo, categoría ni notas; el estado solo cambia si estaba `pendiente`.
 - **Correo BCR**: columnas ubicadas por texto del encabezado (sin tildes/puntos), tablas anidadas y celdas sin cerrar soportadas. Solo `Aprobada` crea transacción; otros estados → aviso en raw_events. Si una fila aprobada no se puede interpretar, falla el correo completo (`error`) para reprocesarlo tras arreglar el parser.
-- **Moneda**: texto con "colon" → CRC, con "dolar" → USD (sin tildes ni mayúsculas). Otro → `moneda` NULL, estado `pendiente` y aviso.
+- **Moneda**: texto con "colon" → CRC (real: `COLON COSTA RICA`), con "dollar"/"dolar" → USD (real: `US DOLLAR`). Sin tildes ni mayúsculas. Otro → `moneda` NULL, estado `pendiente` y aviso.
 - **SMS SINPE**: fecha = primeros 8 dígitos del comprobante; hora = `received_at` convertido a hora de CR. `received_at` debe traer offset (si no, error). Descripción sin el relleno de asteriscos; vacía → NULL.
 - **Cuentas** se crean solas: `Tarjeta BCR ****NNNN` por últimos 4 dígitos; una única `SINPE Móvil`. Moneda por defecto CRC.
 - Tipo por defecto de lo importado: `gasto` (las reglas lo ajustarán en la Etapa 2).
@@ -55,14 +55,16 @@ Requiere Python 3.12+. Sin dependencias de runtime por ahora.
 
 ## Estado de etapas
 
-- [x] **Etapa 0: Base.** Esquema + migraciones, parsers BCR y SINPE con fixtures, ingesta idempotente y reproceso. 26 tests.
+- [x] **Etapa 0: Base.** Esquema + migraciones, parsers BCR y SINPE con fixtures, ingesta idempotente y reproceso. 27 tests.
 - [ ] Etapa 1: Importador de Gmail (IMAP, keyring, systemd, CLI de reproceso).
 - [ ] Etapa 2: UI de escritorio.
 - [ ] Etapa 3: App Android.
 - [ ] Etapa 4: Importador de eventos del teléfono.
 - [ ] Etapa 5: Pulido.
 
-## Pendientes / por confirmar
+## Correo BCR real (verificado oct-2026)
 
-- Texto exacto de la columna Moneda para compras en dólares (se asumió que contiene "DOLAR").
-- Estructura HTML real del correo BCR: el fixture es sintético a partir de la tabla descrita. Validar con un correo real (sanitizado) al inicio de la Etapa 1.
+- Remitente `bcrtarjestcta@bancobcr.com`, asunto `Notificación de Transacciones BCR`. El mismo remitente manda otros correos (p. ej. "Ahora puede usar Google Pay"): en la Etapa 1 filtrar también por asunto.
+- Estructura: encabezado de tarjeta en un `div`, tabla con `thead`/`tbody` y `th`. Normalmente una fila por correo. El pie trae un enlace de WhatsApp que repite los datos en la URL (solo atributo, el parser lo ignora). Réplica sanitizada en `tests/fixtures/bcr/una_fila.html`.
+- Montos con coma de miles (`1,614.72`). Hay dos tarjetas en uso (dos cuentas distintas).
+- Algunos comercios de Uber llegan como `UBR PENDING ...` (posible preautorización); revisar en la Etapa 2 si después llega el cargo final.

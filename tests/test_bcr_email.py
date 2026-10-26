@@ -2,7 +2,7 @@ import pytest
 
 from conftest import leer_fixture
 from finanzas.parsers import bcr_email
-from finanzas.parsers.base import ErrorParseo
+from finanzas.parsers.base import ErrorParseo, detectar_moneda
 
 RECIBIDO = "2026-10-26T08:45:00-06:00"
 
@@ -83,3 +83,10 @@ def test_celdas_sin_cerrar():
     resultado = bcr_email.parsear(html, RECIBIDO)
     assert len(resultado.transacciones) == 1
     assert resultado.transacciones[0].llave_unica == "bcr:00400001:100000000030"
+
+
+def test_detectar_moneda_textos_reales():
+    assert detectar_moneda("COLON COSTA RICA") == "CRC"
+    assert detectar_moneda("US DOLLAR") == "USD"
+    assert detectar_moneda("Colones") == "CRC"
+    assert detectar_moneda("EURO") is None
