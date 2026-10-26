@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "event_id": "2026102215283000000000001",
+  "source": "sms_4066",
+  "received_at": "2026-10-22T15:28:41-06:00",
+  "body": "Ha enviado 2,500.00 Colones a NOMBRE APELLIDO APELLIDO por SINPE Movil, Almuerzo*********. Comprobante 2026102215283000000000001.",
+  "device": "fold8"
+}

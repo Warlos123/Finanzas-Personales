@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "event_id": "2026102307150000000000002",
+  "source": "sms_4066",
+  "received_at": "2026-10-23T13:15:09Z",
+  "body": "Ha enviado 12,345.50 Colones a PERSONA DE PRUEBA UNO por SINPE Movil, Pasaje bus #2 (ida)*****. Comprobante 2026102307150000000000002.",
+  "device": "fold8"
+}
