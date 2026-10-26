@@ -1,0 +1,7 @@
+[Unit]
+Description=Finanzas: importar correos BCR (Gmail IMAP, solo lectura)
+
+[Service]
+Type=oneshot
+ExecStart="@FINANZAS_BIN@" importar
+Nice=10
