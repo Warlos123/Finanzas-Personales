@@ -28,7 +28,9 @@ finanzas/
   llavero.py           contraseña de Gmail en libsecret vía `secret-tool` (por stdin)
   notificar.py         notify-send
   gmail.py             importador IMAP solo lectura + configurar()
-  cli.py, __main__.py  comando `finanzas` (configurar-gmail, importar, reprocesar, ui)
+  telefono.py          importa los JSON del teléfono (carpeta Syncthing) → procesados/ o rechazados/
+  alertas.py           estado de sincronización y notificaciones (novedades, teléfono atrasado)
+  cli.py, __main__.py  comando `finanzas` (configurar-gmail, configurar-telefono, importar, reprocesar, ui)
   reglas.py            reglas de categorización (buscar, aplicar, crear/editar/borrar)
   movimientos.py       consultas y cambios de transacciones para la UI (filtros, bandeja, edición)
   recurrentes.py       ingresos recurrentes → un ingreso por mes
@@ -86,6 +88,9 @@ tests/
 - **Android**: Kotlin sin AppCompat ni Compose (Activity del framework + XML); dependencias: documentfile y work-runtime. minSdk 31, targetSdk 35. Sin permiso INTERNET. Solo exporta SMS entrantes del 4066 que traen `Comprobante <dígitos>`; los demás se descartan sin guardarse. `received_at` = hora de llegada al teléfono (en vivo `currentTimeMillis`, en backfill la columna `date` de la bandeja). Intenta escribir directo y, si falla, cola + WorkManager (`vaciar-cola`, KEEP, backoff 30 s). La tabla `exportados` evita archivos duplicados aunque la PC mueva los JSON. Firma desde `android/firma.properties` (fuera de git). **Llave solo en la PC del usuario** (decisión, opción 2): en la primera compilación se genera `android/finanzas.keystore` con contraseña aleatoria y se le entregan el keystore y `firma.properties`; él los guarda en `~/Finanzas-Personales/android/` (ignorados por git). Para compilar actualizaciones en otra sesión, pedirle que adjunte ambos archivos; nunca commitearlos.
 - **Se mantiene el teléfono** (decisión del usuario, 27-oct-2026): se evaluó capturar los SINPE solo por correo. El BCR sí manda "SINPEMOVIL - Notificación de transacción realizada" (`mensajero@bancobcr.com`), pero en 60 días hubo uno solo; los SINPE por SMS no generan correo. También existen correos de ingresos "Pagos Inmediatos - Notificación…" y "Débito en Tiempo Real Entrante…" (`BCRNotificacion@bancobcr.com`), pocos; posible mejora futura, no pedida.
 - **Compilar Android** requiere `dl.google.com` (SDK y también `maven.google.com`, que redirige ahí); el entorno ya lo permite (red **Custom** con `dl.google.com` + lista por defecto). Versiones: AGP 8.11.1, Kotlin 2.2.0, Gradle 8.14.3, compile/target SDK 35. En una sesión nueva: bajar `commandlinetools-linux-*_latest.zip` a `/root/android-sdk/cmdline-tools/latest`, `yes | sdkmanager --licenses`, `sdkmanager "platforms;android-35" "build-tools;35.0.0"`, `echo sdk.dir=/root/android-sdk > android/local.properties`, pedir al usuario `finanzas.keystore` + `firma.properties` y `gradle -p android --max-workers=2 testDebugUnitTest assembleRelease` (`--max-workers=2` evita el 429 de Maven Central). Subir `versionCode` en cada APK nuevo.
+- **Eventos del teléfono (PC)**: carpeta en `settings.telefono_carpeta` (`finanzas configurar-telefono RUTA`); en la PC del usuario está dentro del repo (`~/Finanzas-Personales/finanzas-eventos`, ignorada por git). Lee solo `*.json` de la raíz (ignora `.…` y `~…`, temporales de Syncthing). Valida esquema v1 (`source` = `sms_4066`, `event_id` numérico, `received_at` con offset, `body`); lo inválido va a `rechazados/` sin importarse. Lo válido pasa por `ingesta.importar_evento` y se mueve a `procesados/` (también los duplicados). `configurar-telefono` agrega `procesados` y `rechazados` al `.stignore`: al moverlos, el teléfono los borra de su carpeta. `import_runs` de `sms_4066` solo se registra si hubo archivos.
+- **`importar`** corre teléfono y Gmail de forma independiente (si uno falla, el otro sigue) y después las alertas. Código de salida: el de Gmail si falló; si no, 4 cuando la carpeta del teléfono no existe; si no, 0.
+- **Alertas**: (1) una notificación por corrida si subió la bandeja o los eventos con error; (2) teléfono atrasado si pasan **3 días** sin eventos nuevos (`settings.telefono_ultimo_evento` = `received_at` más reciente; si nunca llegó uno, desde `telefono_configurado_en`), una sola vez por cada último evento (`settings.aviso_telefono_para`). Limitación conocida: 3 días sin hacer SINPE también dispara el aviso. Presupuestos y gasto atípico: Etapa 5.
 - **Categorías base** (migración 0002): Comida, Supermercado, Transporte, Servicios, Suscripciones, Salud, Entretenimiento, Otros.
 
 ## Comandos
@@ -95,7 +100,8 @@ python -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 .venv/bin/pytest                                  # todos los tests
 .venv/bin/finanzas configurar-gmail TU@gmail.com  # pide la contraseña de aplicación
-.venv/bin/finanzas importar [--desde 2026-01-01]
+.venv/bin/finanzas configurar-telefono ~/Finanzas-Personales/finanzas-eventos
+.venv/bin/finanzas importar [--desde 2026-01-01]       # teléfono + Gmail + alertas
 .venv/bin/finanzas reprocesar [--fuente gmail_bcr]
 .venv/bin/finanzas ui                             # UI en http://127.0.0.1:8765
 scripts/instalar_systemd.sh                       # timer cada 5 min + servicio de la UI
@@ -112,7 +118,7 @@ Requiere Python 3.12+. Dependencias de runtime: fastapi, uvicorn, jinja2, python
 - [x] **Etapa 1: Importador de Gmail.** IMAP solo lectura, llavero, systemd, CLI. 47 tests con IMAP simulado. Aceptada en la PC (26-oct-2026): backfill de 180 días = 561 correos → 466 transacciones aprobadas (425 CRC, 41 USD), 95 correos `Negada`, 0 duplicados, 0 errores; el timer corre cada 5 min.
 - [x] **Etapa 2: UI de escritorio.** Dashboard, transacciones, bandeja con reglas, ingresos manuales y recurrentes, reglas, cuentas y categorías, tipo de cambio; servicio de usuario y atajo. 75 tests (incluye la aceptación vía UI). Aceptada en la PC (26-oct-2026): categorizar un pendiente crea la regla y las iguales quedan categorizadas. Confirmado por el usuario: "extraordinario" como casilla y USD aparte salvo que haya tipo de cambio.
 - [x] **Etapa 3: App Android.** Aceptada en el Fold (27-oct-2026): los SMS del 4066 generan su JSON en `Documents/finanzas-eventos`. Compilada: APK 0.1.0 (versionCode 1) firmado v2 con la llave del usuario (SHA-256 del certificado `ccc1219e…b58ed`), 5 pruebas JVM, lint sin errores, sin permiso INTERNET. Entregados al usuario el APK, `finanzas.keystore` y `firma.properties`.
-- [ ] Etapa 4: Importador de eventos del teléfono.
+- [~] **Etapa 4: Importador de eventos del teléfono.** Implementado: importación de la carpeta, procesados/rechazados, `.stignore`, estado de sincronización en el dashboard y alertas. 88 tests. Falta la aceptación en la PC: un SINPE enviado aparece en la UI sin tocar nada.
 - [ ] Etapa 5: Pulido.
 
 ## Correo BCR real (verificado oct-2026)

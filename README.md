@@ -24,6 +24,13 @@ python -m venv .venv
 scripts/instalar_systemd.sh
 ```
 
+Para importar los SINPE del teléfono, indica la carpeta que Syncthing sincroniza con el Fold
+(ver [`android/README.md`](android/README.md)); el timer la revisa cada 5 minutos:
+
+```bash
+.venv/bin/finanzas configurar-telefono ~/Finanzas-Personales/finanzas-eventos
+```
+
 La UI queda en http://127.0.0.1:8765. Para abrirla con **SUPER+CTRL+SHIFT+F**, agrega a tus bindings
 de Omarchy (configuración Lua de Hyprland) la línea que imprime `scripts/instalar_systemd.sh`:
 
