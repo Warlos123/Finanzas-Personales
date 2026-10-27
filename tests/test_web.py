@@ -262,6 +262,23 @@ def test_pagina_de_graficos(cliente):
     assert "Ver como tabla" in pagina.text
 
 
+def test_clic_en_columna_muestra_los_gastos_mas_grandes_de_ese_mes(cliente):
+    pagina = cliente.get("/graficos?mes=2026-10").text
+    assert 'href="/graficos?mes=2026-10&amp;detalle=2026-09#grandes"' in pagina
+    assert 'id="grandes"' in pagina
+
+    septiembre = cliente.get("/graficos?mes=2026-10&detalle=2026-09").text
+    assert "Gastos más grandes de septiembre 2026" in septiembre
+    assert "SUPERMERCADO EJEMPLO" not in septiembre
+    assert "Gráficos · octubre 2026" in septiembre
+
+    # Fuera de los 12 meses o inválido: se queda en el mes del gráfico.
+    invalidos = ["2025-01", "x"]
+    for i in range(len(invalidos)):
+        pagina = cliente.get(f"/graficos?mes=2026-10&detalle={invalidos[i]}").text
+        assert "Gastos más grandes de octubre 2026" in pagina
+
+
 def test_css_con_version_para_no_usar_cache_vieja(cliente):
     pagina = cliente.get("/").text
     assert "/static/estilo.css?v=" in pagina

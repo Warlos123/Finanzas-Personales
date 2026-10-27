@@ -197,9 +197,15 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
         mes = _mes_pedido(request)
         with abrir() as conn:
             datos = graficos.gasto_por_mes(conn, mes)
+            # Clic en una columna: ?detalle=AAAA-MM elige el mes de los gastos más grandes (dentro de los 12).
+            detalle = mes
+            pedido = request.query_params.get("detalle")
+            for i in range(len(datos)):
+                if datos[i][0] == pedido:
+                    detalle = pedido
             return mostrar(
-                request, conn, "graficos.html", "graficos", mes=mes,
-                g=graficos.grafico_meses(datos, mes), grandes=metricas.gastos_mas_grandes(conn, mes, 10),
+                request, conn, "graficos.html", "graficos", mes=mes, detalle=detalle,
+                g=graficos.grafico_meses(datos, detalle), grandes=metricas.gastos_mas_grandes(conn, detalle, 10),
                 es_mes_actual=mes == formato.mes_de(_hoy()),
                 hay_tipo_cambio=metricas.tipo_cambio(conn) is not None,
                 anterior=formato.mes_desplazado(mes, -1), siguiente=formato.mes_desplazado(mes, 1),

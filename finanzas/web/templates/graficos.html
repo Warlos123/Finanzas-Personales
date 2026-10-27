@@ -9,21 +9,22 @@
 
 <section class="grafico">
   <h2>Gasto por mes</h2>
-  <p class="tenue">Últimos 12 meses hasta {{ mes | nombre_mes }}{% if es_mes_actual %} (mes en curso){% endif %}. Sin transferencias ni reembolsables.</p>
-  <svg viewBox="0 0 {{ g.ancho }} {{ g.alto }}" role="img" aria-label="Gasto por mes, últimos 12 meses">
+  <p class="tenue">Últimos 12 meses hasta {{ mes | nombre_mes }}{% if es_mes_actual %} (mes en curso){% endif %}. Sin transferencias ni reembolsables.
+  Haz clic en una columna para ver abajo los gastos más grandes de ese mes.</p>
+  <svg viewBox="0 0 {{ g.ancho }} {{ g.alto }}" role="group" aria-label="Gasto por mes, últimos 12 meses">
     {% for m in g.marcas %}
     <line class="rejilla" x1="{{ g.izquierda }}" x2="{{ g.derecha }}" y1="{{ m.y }}" y2="{{ m.y }}" stroke="#8a8a85" stroke-opacity="0.25" />
     <text class="eje" x="{{ g.izquierda - 8 }}" y="{{ m.y + 4 }}" text-anchor="end" font-size="11" fill="#8a8a85">{{ m.texto }}</text>
     {% endfor %}
     {% for c in g.columnas %}
-    <g class="columna{% if c.resaltada %} resaltada{% endif %}" tabindex="0">
+    <a class="columna{% if c.resaltada %} resaltada{% endif %}" href="/graficos?mes={{ mes }}&amp;detalle={{ c.mes }}#grandes">
       <title>{{ c.mes | nombre_mes }}: {{ c.gasto | monto }}</title>
       <rect class="zona" x="{{ c.centro - 18 }}" y="{{ g.base - 220 - 24 }}" width="36" height="{{ 220 + 24 }}" fill="transparent" />
       {% if c.trazo %}<path d="{{ c.trazo }}" fill="#8d9590" />{% endif %}
       {% if c.resaltada %}<text class="valor" x="{{ c.centro }}" y="{{ c.y_valor }}" text-anchor="middle" font-size="12" fill="#8a8a85">{{ c.texto_valor }}</text>{% endif %}
       <text class="eje{% if c.resaltada %} fuerte{% endif %}" x="{{ c.centro }}" y="{{ g.base + 18 }}" text-anchor="middle" font-size="11" fill="#8a8a85">{{ c.etiqueta }}</text>
       {% if c.anio %}<text class="eje" x="{{ c.centro }}" y="{{ g.base + 33 }}" text-anchor="middle" font-size="11" fill="#8a8a85">{{ c.anio }}</text>{% endif %}
-    </g>
+    </a>
     {% endfor %}
     <line class="base" x1="{{ g.izquierda }}" x2="{{ g.derecha }}" y1="{{ g.base }}" y2="{{ g.base }}" stroke="#8a8a85" stroke-opacity="0.5" />
   </svg>
@@ -38,8 +39,8 @@
   </details>
 </section>
 
-<section class="grafico">
-  <h2>Gastos más grandes de {{ mes | nombre_mes }}</h2>
+<section class="grafico" id="grandes">
+  <h2>Gastos más grandes de {{ detalle | nombre_mes }}</h2>
   {% if grandes %}
   <table class="ranking">
     {% for gasto in grandes %}
