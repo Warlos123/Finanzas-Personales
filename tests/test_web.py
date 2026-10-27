@@ -175,3 +175,17 @@ def test_reglas_cuentas_categorias_y_tipo_de_cambio(cliente, ruta):
     assert "inválido" in cliente.post("/ajustes/tipo-cambio", data={"tipo_cambio": "abc"}, headers=ORIGEN).text
     cliente.post("/ajustes/tipo-cambio", data={"tipo_cambio": "505.50"}, headers=ORIGEN)
     assert _consultar(ruta, "SELECT valor FROM settings WHERE clave = 'tipo_cambio_usd'")[0]["valor"] == "505.50"
+
+
+def test_exportar_csv_con_filtros(cliente):
+    respuesta = cliente.get("/transacciones.csv?mes=2026-10&q=soda")
+    assert respuesta.status_code == 200
+    assert respuesta.headers["content-type"].startswith("text/csv")
+    assert 'filename="transacciones-2026-10.csv"' in respuesta.headers["content-disposition"]
+    texto = respuesta.content.decode("utf-8-sig")
+    lineas = texto.strip().splitlines()
+    assert lineas[0].startswith("fecha_hora,cuenta,comercio_o_destinatario")
+    assert len(lineas) == 2
+    assert "SODA LA ESQUINA" in lineas[1]
+    assert ",1500.00,CRC," in lineas[1]
+    assert "Exportar a CSV" in cliente.get("/transacciones?mes=2026-10").text

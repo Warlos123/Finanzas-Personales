@@ -4,13 +4,15 @@ Solo escucha en 127.0.0.1. Para que otras páginas abiertas en el navegador no p
 ni modificarla (DNS rebinding / CSRF), se exige un Host local y, en los POST, un Origin local.
 """
 
+import csv
+import io
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlencode
 
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.responses import PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -66,6 +68,43 @@ def _mes_pedido(request: Request) -> str:
     if formato.mes_valido(mes):
         return mes
     return formato.mes_de(_hoy())
+
+
+def _filtros(request: Request) -> movimientos.Filtros:
+    """Filtros de la lista de transacciones a partir de la URL (mes vacío = todas las fechas)."""
+    parametros = request.query_params
+    filtros = movimientos.Filtros(
+        mes=parametros.get("mes", formato.mes_de(_hoy())),
+        cuenta_id=_entero_opcional(parametros.get("cuenta")),
+        categoria=_texto_opcional(parametros.get("categoria")),
+        tipo=_texto_opcional(parametros.get("tipo")),
+        texto=_texto_opcional(parametros.get("q")),
+        incluir_ignoradas=parametros.get("ignoradas") == "1",
+    )
+    if not formato.mes_valido(filtros.mes):
+        filtros.mes = None
+    return filtros
+
+
+_COLUMNAS_CSV = (
+    "fecha_hora", "cuenta", "comercio_o_destinatario", "descripcion", "categoria", "tipo",
+    "monto", "moneda", "estado", "extraordinario", "notas",
+)
+
+
+def _csv_transacciones(filas: list) -> str:
+    """CSV con BOM UTF-8 (para que Excel y LibreOffice muestren bien las tildes)."""
+    salida = io.StringIO()
+    escritor = csv.writer(salida)
+    escritor.writerow(_COLUMNAS_CSV)
+    for i in range(len(filas)):
+        t = filas[i]
+        escritor.writerow((
+            t["fecha_hora"], t["cuenta_nombre"], t["comercio_o_destinatario"], t["descripcion"],
+            t["categoria_nombre"], t["tipo"], formato.centimos_a_texto(t["monto_centimos"]),
+            t["moneda"], t["estado"], t["extraordinario"], t["notas"],
+        ))
+    return "\ufeff" + salida.getvalue()
 
 
 def _datos_transaccion(formulario, actual=None) -> movimientos.DatosTransaccion:
@@ -146,17 +185,7 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
 
     @app.get("/transacciones")
     def transacciones(request: Request):
-        parametros = request.query_params
-        filtros = movimientos.Filtros(
-            mes=parametros.get("mes", formato.mes_de(_hoy())),
-            cuenta_id=_entero_opcional(parametros.get("cuenta")),
-            categoria=_texto_opcional(parametros.get("categoria")),
-            tipo=_texto_opcional(parametros.get("tipo")),
-            texto=_texto_opcional(parametros.get("q")),
-            incluir_ignoradas=parametros.get("ignoradas") == "1",
-        )
-        if not formato.mes_valido(filtros.mes):
-            filtros.mes = None
+        filtros = _filtros(request)
         with abrir() as conn:
             return mostrar(
                 request, conn, "transacciones.html", "transacciones",
@@ -164,6 +193,20 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
                 cuentas=catalogos.cuentas(conn), categorias=catalogos.categorias(conn),
                 tipos=movimientos.TIPOS,
             )
+
+    @app.get("/transacciones.csv")
+    def exportar_csv(request: Request):
+        filtros = _filtros(request)
+        with abrir() as conn:
+            filas = movimientos.listar(conn, filtros, limite=1_000_000)
+        nombre = "transacciones-todas.csv"
+        if filtros.mes:
+            nombre = f"transacciones-{filtros.mes}.csv"
+        return Response(
+            _csv_transacciones(filas),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+        )
 
     @app.get("/transacciones/{transaccion_id}")
     def transaccion(request: Request, transaccion_id: int):

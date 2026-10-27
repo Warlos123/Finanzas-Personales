@@ -23,7 +23,8 @@
   <button>Filtrar</button>
 </form>
 
-<p class="tenue">{{ filas | length }} transacciones{% if not f.mes %} (todas las fechas, máximo 1000){% endif %}.</p>
+<p class="tenue">{{ filas | length }} transacciones{% if not f.mes %} (todas las fechas, máximo 1000){% endif %}.
+  <a href="/transacciones.csv?{{ request.url.query }}">Exportar a CSV</a> (con estos filtros; se guarda en Descargas).</p>
 <table class="lista">
   <thead><tr><th>Fecha</th><th>Cuenta</th><th>Comercio / destinatario</th><th>Descripción</th><th>Categoría</th><th>Tipo</th><th class="num">Monto</th><th></th></tr></thead>
   <tbody>
