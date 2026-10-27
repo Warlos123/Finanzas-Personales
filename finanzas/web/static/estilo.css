@@ -143,8 +143,8 @@ section.grafico {
   padding: 12px 16px;
   margin-bottom: 16px;
 }
-section.grafico svg { width: 100%; height: auto; display: block; }
-section.grafico .rejilla, section.grafico .base { stroke: var(--rejilla); stroke-width: 1; }
+section.grafico svg { width: 100%; max-width: 900px; height: auto; display: block; }
+section.grafico .rejilla, section.grafico .base { stroke: var(--rejilla); stroke-opacity: 1; stroke-width: 1; }
 section.grafico .base { stroke: var(--borde); }
 section.grafico .eje { fill: var(--tenue); font-size: 11px; font-variant-numeric: tabular-nums; }
 section.grafico .eje.fuerte { fill: var(--texto); font-weight: 600; }

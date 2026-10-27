@@ -5,6 +5,7 @@ ni modificarla (DNS rebinding / CSRF), se exige un Host local y, en los POST, un
 """
 
 import csv
+import hashlib
 import io
 from contextlib import contextmanager
 from datetime import datetime
@@ -141,6 +142,9 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
     plantillas.env.filters["centimos_texto"] = formato.centimos_a_texto
     plantillas.env.filters["porcentaje"] = formato.porcentaje
     plantillas.env.filters["nombre_mes"] = formato.nombre_mes
+    # Versión del CSS en la URL: si el archivo cambia, el navegador no usa la copia en caché.
+    contenido_css = (DIR_WEB / "static" / "estilo.css").read_bytes()
+    plantillas.env.globals["version_css"] = hashlib.sha256(contenido_css).hexdigest()[:10]
 
     hosts_locales = (f"127.0.0.1:{puerto}", f"localhost:{puerto}")
     origenes_locales = (f"http://127.0.0.1:{puerto}", f"http://localhost:{puerto}")

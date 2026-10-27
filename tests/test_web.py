@@ -211,3 +211,10 @@ def test_pagina_de_graficos(cliente):
     assert "Gastos más grandes de octubre 2026" in pagina.text
     assert "SUPERMERCADO EJEMPLO" in pagina.text
     assert "Ver como tabla" in pagina.text
+
+
+def test_css_con_version_para_no_usar_cache_vieja(cliente):
+    pagina = cliente.get("/").text
+    assert "/static/estilo.css?v=" in pagina
+    svg = cliente.get("/graficos?mes=2026-10").text
+    assert 'class="zona"' in svg and 'fill="transparent"' in svg
