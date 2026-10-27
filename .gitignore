@@ -23,9 +23,11 @@ client_secret*.json
 .env
 .env.*
 
-# Eventos del teléfono (carpeta Syncthing)
+# Eventos del teléfono (carpeta Syncthing): traen cuerpos de SMS, nunca al repo
 eventos/
+finanzas-eventos/
 procesados/
+rechazados/
 .stfolder/
 .stversions/
 
