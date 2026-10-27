@@ -262,3 +262,43 @@ def estado_presupuestos(conn: sqlite3.Connection, mes: str) -> list[Presupuesto]
             gastado=gastado.get(categoria, 0),
         ))
     return resultado
+
+
+@dataclass
+class GastoGrande:
+    fecha_hora: str
+    nombre: str
+    categoria: str | None
+    monto: int  # en colones (convertido si era USD)
+    moneda: str
+    monto_original: int
+
+
+def gastos_mas_grandes(conn: sqlite3.Connection, mes: str, limite: int = 10) -> list[GastoGrande]:
+    """Los gastos individuales más grandes del mes, en colones. Sin tipo de cambio, los USD no entran."""
+    cambio = tipo_cambio(conn)
+    inicio, fin = rango_mes(mes)
+    filas = conn.execute(
+        """SELECT t.fecha_hora, t.comercio_o_destinatario, t.descripcion, t.monto_centimos, t.moneda,
+                  c.nombre AS categoria
+           FROM transactions t LEFT JOIN categories c ON c.id = t.categoria_id
+           WHERE t.tipo = 'gasto' AND t.estado != 'ignorada' AND t.moneda IS NOT NULL
+             AND t.fecha_hora >= ? AND t.fecha_hora < ?""",
+        (inicio, fin),
+    ).fetchall()
+    gastos = []
+    for i in range(len(filas)):
+        monto = _en_colones(filas[i]["monto_centimos"], filas[i]["moneda"], cambio)
+        if monto is None:
+            continue
+        nombre = filas[i]["comercio_o_destinatario"]
+        if not nombre:
+            nombre = "(sin nombre)"
+        if filas[i]["descripcion"]:
+            nombre = f"{nombre} · {filas[i]['descripcion']}"
+        gastos.append(GastoGrande(
+            fecha_hora=filas[i]["fecha_hora"], nombre=nombre, categoria=filas[i]["categoria"],
+            monto=monto, moneda=filas[i]["moneda"], monto_original=filas[i]["monto_centimos"],
+        ))
+    gastos.sort(key=lambda gasto: gasto.monto, reverse=True)
+    return gastos[:limite]
