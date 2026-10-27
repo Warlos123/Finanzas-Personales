@@ -34,6 +34,14 @@
   {% endif %}
   {% if pendientes %}<br><a href="/bandeja">{{ pendientes }} transacciones por revisar</a>.{% endif %}
 </p>
+<p class="tenue">
+  Sincronización · correo: {% if sinc.ultima_importacion_correo %}última importación {{ sinc.ultima_importacion_correo | fecha_corta }}{% else %}sin importaciones{% endif %}
+  · teléfono:
+  {% if not sinc.telefono_configurado %}sin configurar (<code>finanzas configurar-telefono</code>)
+  {% elif sinc.ultimo_evento_telefono %}último SINPE {{ sinc.ultimo_evento_telefono | fecha_corta }}
+  {% else %}todavía no llegan eventos{% endif %}
+  {% if sinc.telefono_atrasado %}<strong class="negativo">— hace {{ sinc.dias_sin_telefono }} días sin eventos del teléfono; revisa Syncthing y la app.</strong>{% endif %}
+</p>
 
 <div class="columnas">
 <section>

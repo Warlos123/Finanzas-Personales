@@ -14,7 +14,7 @@ from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from finanzas import catalogos, db, formato, ingesta, metricas, movimientos, recurrentes, reglas
+from finanzas import alertas, catalogos, db, formato, ingesta, metricas, movimientos, recurrentes, reglas
 from finanzas.tiempo import ZONA_CR
 
 PUERTO = 8765
@@ -139,6 +139,7 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
                 request, conn, "dashboard.html", "dashboard", r=resumen,
                 anterior=formato.mes_desplazado(mes, -1), siguiente=formato.mes_desplazado(mes, 1),
                 hay_tipo_cambio=metricas.tipo_cambio(conn) is not None,
+                sinc=alertas.estado(conn, datetime.now(ZONA_CR)),
             )
 
     # --- Transacciones ---

@@ -5,11 +5,12 @@ import getpass
 import imaplib
 import logging
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
-from finanzas import db, gmail, ingesta
+from finanzas import alertas, db, gmail, ingesta, telefono
 from finanzas.llavero import ErrorLlavero
+from finanzas.tiempo import ZONA_CR
 
 log = logging.getLogger("finanzas")
 
@@ -45,10 +46,39 @@ def _cmd_configurar_gmail(args) -> int:
     return 0
 
 
-def _cmd_importar(args) -> int:
+def _cmd_configurar_telefono(args) -> int:
     conn = _abrir_db(args)
     try:
-        resumen = gmail.importar_gmail(conn, desde=args.desde)
+        agregados = telefono.configurar(conn, Path(args.carpeta))
+    except ValueError as error:
+        print(f"Error: {error}", file=sys.stderr)
+        return 1
+    finally:
+        conn.close()
+    print(f"Listo: se importarán los eventos de {Path(args.carpeta).expanduser().resolve()}")
+    if agregados:
+        print("Agregado a .stignore de Syncthing: " + ", ".join(agregados))
+    return 0
+
+
+def _importar_telefono(conn) -> int:
+    """0 si salió bien o el teléfono no está configurado; 4 si la carpeta no existe."""
+    try:
+        resumen = telefono.importar_telefono(conn)
+    except FileNotFoundError as error:
+        log.error("%s", error)
+        return 4
+    if resumen is not None and (resumen.nuevos or resumen.duplicados or resumen.rechazados):
+        log.info(
+            "Teléfono: %d nuevos, %d duplicados, %d rechazados, %d errores",
+            resumen.nuevos, resumen.duplicados, resumen.rechazados, resumen.errores,
+        )
+    return 0
+
+
+def _importar_gmail(conn, desde) -> int:
+    try:
+        resumen = gmail.importar_gmail(conn, desde=desde)
     except gmail.ErrorConfiguracion as error:
         log.error("%s", error)
         return 1
@@ -61,13 +91,27 @@ def _cmd_importar(args) -> int:
     except (OSError, imaplib.IMAP4.error) as error:
         log.error("Falló la conexión con Gmail (%s): %s", type(error).__name__, error)
         return 3
-    finally:
-        conn.close()
     log.info(
         "Gmail: %d nuevos, %d duplicados, %d errores",
         resumen.nuevos, resumen.duplicados, resumen.errores,
     )
     return 0
+
+
+def _cmd_importar(args) -> int:
+    """Teléfono y Gmail son independientes: si uno falla, el otro igual se importa."""
+    conn = _abrir_db(args)
+    try:
+        antes = alertas.contar(conn)
+        codigo_telefono = _importar_telefono(conn)
+        codigo_gmail = _importar_gmail(conn, args.desde)
+        alertas.avisar_novedades(conn, antes)
+        alertas.avisar_telefono(conn, datetime.now(ZONA_CR))
+    finally:
+        conn.close()
+    if codigo_gmail != 0:
+        return codigo_gmail
+    return codigo_telefono
 
 
 def _cmd_reprocesar(args) -> int:
@@ -107,7 +151,13 @@ def main(argv=None) -> int:
     configurar.add_argument("usuario", help="dirección de Gmail")
     configurar.set_defaults(funcion=_cmd_configurar_gmail)
 
-    importar = comandos.add_parser("importar", help="importar correos BCR nuevos")
+    configurar_telefono = comandos.add_parser(
+        "configurar-telefono", help="carpeta de Syncthing donde el teléfono deja los eventos"
+    )
+    configurar_telefono.add_argument("carpeta")
+    configurar_telefono.set_defaults(funcion=_cmd_configurar_telefono)
+
+    importar = comandos.add_parser("importar", help="importar eventos del teléfono y correos BCR nuevos")
     importar.add_argument(
         "--desde",
         type=date.fromisoformat,
