@@ -8,9 +8,9 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-from finanzas import alertas, db, gmail, ingesta, telefono
+from finanzas import alertas, db, gmail, ingesta, respaldos, resumen, telefono
 from finanzas.llavero import ErrorLlavero
-from finanzas.tiempo import ZONA_CR
+from finanzas.tiempo import ZONA_CR, ahora_iso
 
 log = logging.getLogger("finanzas")
 
@@ -98,15 +98,34 @@ def _importar_gmail(conn, desde) -> int:
     return 0
 
 
+def _tareas_posteriores(conn, ruta_db, antes, inicio: str) -> None:
+    """Alertas, backup diario y resumen mensual. Si una falla, las demás igual corren."""
+    ahora = datetime.now(ZONA_CR)
+    tareas = (
+        ("aviso de novedades", lambda: alertas.avisar_novedades(conn, antes)),
+        ("aviso del teléfono", lambda: alertas.avisar_telefono(conn, ahora)),
+        ("aviso de presupuestos", lambda: alertas.avisar_presupuestos(conn, ahora.date())),
+        ("aviso de gasto atípico", lambda: alertas.avisar_atipicos(conn, inicio)),
+        ("backup diario", lambda: respaldos.diario(conn, ruta_db, ahora.date())),
+        ("resumen mensual", lambda: resumen.mensual(conn, ruta_db, ahora.date())),
+    )
+    for i in range(len(tareas)):
+        nombre, tarea = tareas[i]
+        try:
+            tarea()
+        except Exception as error:
+            log.error("Falló %s (%s)", nombre, type(error).__name__)
+
+
 def _cmd_importar(args) -> int:
     """Teléfono y Gmail son independientes: si uno falla, el otro igual se importa."""
     conn = _abrir_db(args)
     try:
+        inicio = ahora_iso()
         antes = alertas.contar(conn)
         codigo_telefono = _importar_telefono(conn)
         codigo_gmail = _importar_gmail(conn, args.desde)
-        alertas.avisar_novedades(conn, antes)
-        alertas.avisar_telefono(conn, datetime.now(ZONA_CR))
+        _tareas_posteriores(conn, Path(args.db), antes, inicio)
     finally:
         conn.close()
     if codigo_gmail != 0:

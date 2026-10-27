@@ -196,3 +196,13 @@ def test_importar_trae_el_sinpe_del_telefono_aunque_gmail_no_este_configurado(tm
     for i in range(len(avisos)):
         titulos.append(avisos[i][0])
     assert "Finanzas: hay cosas por revisar" in titulos
+
+
+def test_importar_hace_backup_diario(tmp_path, carpeta, avisos, monkeypatch):
+    from finanzas import resumen
+    monkeypatch.setattr(resumen, "notificar", lambda *args, **kwargs: None)
+    ruta = tmp_path / "finanzas.db"
+    cli.main(["--db", str(ruta), "configurar-telefono", str(carpeta)])
+    cli.main(["--db", str(ruta), "importar"])
+    respaldos = list((tmp_path / "backups").glob("finanzas-*.db"))
+    assert len(respaldos) == 1
