@@ -7,6 +7,8 @@
   --acento: #2f6f5e;
   --negativo: #b4412f;
   --alerta: #a3700b;
+  --barra-tenue: #8d9590;
+  --rejilla: #e4e4df;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -19,6 +21,8 @@
     --acento: #6cc4a8;
     --negativo: #ef8a78;
     --alerta: #e2b04a;
+    --barra-tenue: #6e757b;
+    --rejilla: #2c2e33;
   }
 }
 
@@ -130,3 +134,30 @@ table.lista td input[type=number] { max-width: 6em; }
 table.lista td button { margin: 1px 0; }
 td.barra span.alerta { background: var(--alerta); }
 td.barra span.excedido { background: var(--negativo); }
+
+/* Gráficos: una serie; el mes elegido en el acento, el resto en gris (contraste >= 3:1 validado). */
+section.grafico {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+section.grafico svg { width: 100%; height: auto; display: block; }
+section.grafico .rejilla, section.grafico .base { stroke: var(--rejilla); stroke-width: 1; }
+section.grafico .base { stroke: var(--borde); }
+section.grafico .eje { fill: var(--tenue); font-size: 11px; font-variant-numeric: tabular-nums; }
+section.grafico .eje.fuerte { fill: var(--texto); font-weight: 600; }
+section.grafico .valor { fill: var(--texto); font-size: 12px; font-weight: 600; }
+section.grafico .columna path { fill: var(--barra-tenue); }
+section.grafico .columna.resaltada path { fill: var(--acento); }
+section.grafico .columna .zona { fill: transparent; }
+section.grafico .columna:hover path, section.grafico .columna:focus path { opacity: 0.8; }
+section.grafico .columna:focus { outline: none; }
+section.grafico .columna:focus .zona { stroke: var(--borde); }
+section.grafico details { margin-top: 8px; }
+table.ranking td { padding: 6px; border-top: 1px solid var(--rejilla); }
+table.ranking tr:first-child td { border-top: none; }
+table.ranking td.nombre { width: 40%; }
+table.ranking td.barra { width: 45%; }
+table.ranking td.barra span { height: 12px; border-radius: 0 4px 4px 0; background: var(--acento); }

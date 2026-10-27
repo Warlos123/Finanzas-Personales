@@ -17,7 +17,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from finanzas import (
-    alertas, catalogos, db, formato, ingesta, metricas, movimientos, recurrentes, reglas, suscripciones,
+    alertas, catalogos, db, formato, graficos, ingesta, metricas, movimientos, recurrentes, reglas,
+    suscripciones,
 )
 from finanzas.tiempo import ZONA_CR
 
@@ -183,6 +184,21 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
                 sinc=alertas.estado(conn, datetime.now(ZONA_CR)),
                 presupuestos=metricas.estado_presupuestos(conn, mes),
                 suscripciones=suscripciones.detectar(conn, _hoy()),
+            )
+
+    # --- Gráficos ---
+
+    @app.get("/graficos")
+    def pagina_graficos(request: Request):
+        mes = _mes_pedido(request)
+        with abrir() as conn:
+            datos = graficos.gasto_por_mes(conn, mes)
+            return mostrar(
+                request, conn, "graficos.html", "graficos", mes=mes,
+                g=graficos.grafico_meses(datos, mes), grandes=metricas.gastos_mas_grandes(conn, mes, 10),
+                es_mes_actual=mes == formato.mes_de(_hoy()),
+                hay_tipo_cambio=metricas.tipo_cambio(conn) is not None,
+                anterior=formato.mes_desplazado(mes, -1), siguiente=formato.mes_desplazado(mes, 1),
             )
 
     # --- Transacciones ---

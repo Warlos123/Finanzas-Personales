@@ -202,3 +202,12 @@ def test_presupuesto_desde_categorias_y_en_el_dashboard(cliente, ruta):
     cliente.post(f"/categorias/{comida}", data={"nombre": "Comida", "padre_id": "", "presupuesto": ""},
                  headers=ORIGEN)
     assert _consultar(ruta, "SELECT COUNT(*) FROM budgets")[0][0] == 0
+
+
+def test_pagina_de_graficos(cliente):
+    pagina = cliente.get("/graficos?mes=2026-10")
+    assert pagina.status_code == 200
+    assert "<svg" in pagina.text
+    assert "Gastos más grandes de octubre 2026" in pagina.text
+    assert "SUPERMERCADO EJEMPLO" in pagina.text
+    assert "Ver como tabla" in pagina.text
