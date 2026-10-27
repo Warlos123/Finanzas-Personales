@@ -29,7 +29,11 @@ finanzas/
   notificar.py         notify-send
   gmail.py             importador IMAP solo lectura + configurar()
   telefono.py          importa los JSON del teléfono (carpeta Syncthing) → procesados/ o rechazados/
-  alertas.py           estado de sincronización y notificaciones (novedades, teléfono atrasado)
+  alertas.py           estado de sincronización y notificaciones (novedades, teléfono, presupuestos, gasto atípico)
+  respaldos.py         backup diario con la API de SQLite, rotación de 14
+  resumen.py           resumen mensual en Markdown + notificación
+  suscripciones.py     detección de cobros mensuales recurrentes
+  graficos.py          datos y geometría SVG de la página de gráficos
   cli.py, __main__.py  comando `finanzas` (configurar-gmail, configurar-telefono, importar, reprocesar, ui)
   reglas.py            reglas de categorización (buscar, aplicar, crear/editar/borrar)
   movimientos.py       consultas y cambios de transacciones para la UI (filtros, bandeja, edición)
@@ -91,6 +95,14 @@ tests/
 - **Eventos del teléfono (PC)**: carpeta en `settings.telefono_carpeta` (`finanzas configurar-telefono RUTA`); en la PC del usuario está dentro del repo (`~/Finanzas-Personales/finanzas-eventos`, ignorada por git). Lee solo `*.json` de la raíz (ignora `.…` y `~…`, temporales de Syncthing). Valida esquema v1 (`source` = `sms_4066`, `event_id` numérico, `received_at` con offset, `body`); lo inválido va a `rechazados/` sin importarse. Lo válido pasa por `ingesta.importar_evento` y se mueve a `procesados/` (también los duplicados). `configurar-telefono` agrega `procesados` y `rechazados` al `.stignore`: al moverlos, el teléfono los borra de su carpeta. `import_runs` de `sms_4066` solo se registra si hubo archivos.
 - **`importar`** corre teléfono y Gmail de forma independiente (si uno falla, el otro sigue) y después las alertas. Código de salida: el de Gmail si falló; si no, 4 cuando la carpeta del teléfono no existe; si no, 0.
 - **Alertas**: (1) una notificación por corrida si subió la bandeja o los eventos con error; (2) teléfono atrasado si pasan **3 días** sin eventos nuevos (`settings.telefono_ultimo_evento` = `received_at` más reciente; si nunca llegó uno, desde `telefono_configurado_en`), una sola vez por cada último evento (`settings.aviso_telefono_para`). Limitación conocida: 3 días sin hacer SINPE también dispara el aviso. Presupuestos y gasto atípico: Etapa 5.
+- **Tareas después de `importar`** (cada 5 min con el timer), cada una aislada (si falla, se loguea el tipo de error y siguen las demás): aviso de novedades, teléfono atrasado, presupuestos, gasto atípico, backup diario y resumen mensual.
+- **Backups**: `backups/finanzas-AAAA-MM-DD.db` junto a la base (carpeta 0700), uno por día con `conn.backup()` a un temporal + rename; se conservan 14.
+- **Exportar CSV**: `GET /transacciones.csv` con los mismos filtros de la lista; columnas fijas, monto decimal con punto, BOM UTF-8. En la ventana WebKitGTK se guarda en Descargas.
+- **Presupuestos**: por categoría en `budgets` (CRC), se editan en "Cuentas y categorías" (vacío = sin presupuesto). El gasto de una categoría suma el de sus subcategorías directas. Avisos al 80% y al 100%, uno por categoría/umbral/mes (`settings.aviso_presupuesto:<mes>:<cat>:<umbral>`).
+- **Gasto atípico**: gasto creado en la corrida > ₡20,000 y > 3× la mediana de su categoría (o de todos los gastos si no tiene categoría) en los 90 días previos, con al menos 5 de referencia. Un aviso por corrida; en SINPE no se muestra el destinatario.
+- **Suscripciones**: cobros con tarjeta (no SINPE) al mismo comercio y moneda, ≥3 en ≥3 meses dentro de 400 días, intervalo mediano 25–35 días, monto máx ≤ 1.25 × mín, último cobro hace ≤ 45 días. Se muestran en el dashboard y en el resumen.
+- **Resumen mensual**: el primer `importar` de cada mes escribe `resumenes/AAAA-MM.md` (junto a la base) del mes anterior si hubo transacciones, y notifica gasto, ingresos y ahorro. No se regenera si el archivo existe.
+- **Gráficos** (pedido por el usuario): página `/graficos?mes=` con (1) columnas de gasto de los últimos 12 meses (SVG del servidor, una serie: el mes elegido en `--acento` con su valor, el resto en `--barra-tenue`; gris claro `#8d9590` y oscuro `#6e757b` validados con el script de la skill dataviz: contraste ≥ 3:1 y ΔE ≥ 14 contra el acento; tooltip nativo `<title>` y tabla en `<details>`) y (2) los 10 gastos individuales más grandes del mes (barras HTML). USD solo entran con tipo de cambio.
 - **Categorías base** (migración 0002): Comida, Supermercado, Transporte, Servicios, Suscripciones, Salud, Entretenimiento, Otros.
 
 ## Comandos
@@ -119,7 +131,7 @@ Requiere Python 3.12+. Dependencias de runtime: fastapi, uvicorn, jinja2, python
 - [x] **Etapa 2: UI de escritorio.** Dashboard, transacciones, bandeja con reglas, ingresos manuales y recurrentes, reglas, cuentas y categorías, tipo de cambio; servicio de usuario y atajo. 75 tests (incluye la aceptación vía UI). Aceptada en la PC (26-oct-2026): categorizar un pendiente crea la regla y las iguales quedan categorizadas. Confirmado por el usuario: "extraordinario" como casilla y USD aparte salvo que haya tipo de cambio.
 - [x] **Etapa 3: App Android.** Aceptada en el Fold (27-oct-2026): los SMS del 4066 generan su JSON en `Documents/finanzas-eventos`. Compilada: APK 0.1.0 (versionCode 1) firmado v2 con la llave del usuario (SHA-256 del certificado `ccc1219e…b58ed`), 5 pruebas JVM, lint sin errores, sin permiso INTERNET. Entregados al usuario el APK, `finanzas.keystore` y `firma.properties`.
 - [x] **Etapa 4: Importador de eventos del teléfono.** Importación de la carpeta, procesados/rechazados, `.stignore`, estado de sincronización en el dashboard y alertas. 88 tests. Aceptada en la PC (27-oct-2026): Syncthing emparejado (Fold ↔ `~/Finanzas-Personales/finanzas-eventos`), los SINPE llegan a la base y salió la notificación de transacciones nuevas.
-- [ ] Etapa 5: Pulido.
+- [~] **Etapa 5: Pulido.** Hecho: backups diarios, exportar CSV, presupuestos con avisos, gasto atípico, suscripciones, resumen mensual y gráficos (pedido extra). 109 tests. Falta: reconciliación con el CSV del estado de cuenta del BCR (pedir muestra al usuario cuando la quiera hacer) y la revisión del usuario en la PC.
 
 ## Correo BCR real (verificado oct-2026)
 

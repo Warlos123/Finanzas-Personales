@@ -45,6 +45,11 @@ Para actualizar después de un `git pull`:
 systemctl --user restart finanzas-ui
 ```
 
+La UI tiene dashboard (con presupuestos y suscripciones detectadas), gráficos, transacciones
+(con exportación a CSV), bandeja de pendientes, ingresos, reglas y cuentas/categorías. Cada
+corrida del timer además hace el backup diario (`~/.local/share/finanzas/backups/`, últimos 14) y,
+el primer día del mes, el resumen del mes anterior (`~/.local/share/finanzas/resumenes/`).
+
 Comprobar que no hay duplicados:
 
 ```bash
