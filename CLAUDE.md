@@ -143,4 +143,13 @@ Requiere Python 3.12+. Dependencias de runtime: fastapi, uvicorn, jinja2, python
 - Estructura: encabezado de tarjeta en un `div`, tabla con `thead`/`tbody` y `th`. Normalmente una fila por correo. El pie trae un enlace de WhatsApp que repite los datos en la URL (solo atributo, el parser lo ignora). Réplica sanitizada en `tests/fixtures/bcr/una_fila.html`.
 - Montos con coma de miles (`1,614.72`). Hay dos tarjetas en uso (dos cuentas distintas).
 - Estados vistos: `Aprobada` y `Negada` (~17% de los correos). Las negadas quedan solo en `raw_events` (`con_avisos`).
-- Algunos comercios de Uber llegan como `UBR PENDING ...` (posible preautorización); revisar en la Etapa 2 si después llega el cargo final.
+- Algunos comercios de Uber llegan como `UBR PENDING ...`: es el cargo final, no una preautorización aparte (en el estado de cuenta aparece una sola vez como `UBER *TRIP`, misma autorización y monto).
+
+## Estado de cuenta BCR (PDF, visto oct-2026)
+
+- El BCR solo lo deja descargar en PDF (Microsoft Reporting Services). Muestra: cuenta de ahorros en colones, período del 1 al 30 del mes; trae las compras de la tarjeta de débito (columna Tarjeta = últimos 4), SINPE y transferencias.
+- Columnas: Fecha Movimiento (`dd/mm/aa`), Fecha Contable, Tarjeta, Documento, Concepto (`TIPO - detalle`), Monto Débito, Monto Crédito. Débito o crédito **solo se distingue por la posición** de la columna. El encabezado se repite en cada página; arriba vienen el saldo anterior y el período de corte, y al final los totales de débitos y créditos y el saldo final (sirven para validar la lectura). Entran compras de días previos si su fecha contable cae en el período.
+- **Documento de una compra = Autorización del correo sin ceros a la izquierda** (verificado con 2 compras).
+- Tipos vistos: `COMPRAS EN COMERCIOS`; `MONEDERO SINPE MOVIL` y `SINPE MOVIL OTRA ENT` (débito = enviado, crédito = recibido); `TRANSFERENC BANCOBCR` (en ambos sentidos); `TRAN CTA AH TAR VIRT`; `EMISION CDP` / `CANC CDP` (movimientos internos); `CUPONES CDPS ELECTR` e `INTS GANADOS` (intereses); `SERV ADMIN VISA AH` (comisión).
+- El detalle de los SINPE puede traer un número de teléfono: nunca loguearlo; en los fixtures, número ficticio.
+- Hay compras con tarjeta que no generaron correo (p. ej. parqueos); la reconciliación es la forma de detectarlas.
