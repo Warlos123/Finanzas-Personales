@@ -84,6 +84,11 @@ def tipo_cambio(conn: sqlite3.Connection) -> Decimal | None:
     return cambio
 
 
+def en_colones(monto: int, moneda: str, cambio: Decimal | None) -> int | None:
+    """Céntimos de colón, o None si es USD y no hay tipo de cambio."""
+    return _en_colones(monto, moneda, cambio)
+
+
 def _en_colones(monto: int, moneda: str, cambio: Decimal | None) -> int | None:
     if moneda == "CRC":
         return monto
