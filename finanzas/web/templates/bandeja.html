@@ -4,11 +4,17 @@
 {% block contenido %}
 <h1>Bandeja de pendientes</h1>
 <p class="tenue">Gastos sin categoría (agrupados por comercio o destinatario) y transacciones con moneda desconocida.
-Al guardar con "crear regla", se categorizan también las demás iguales y las que lleguen después.</p>
+Elige categorías en todas las filas que quieras y guarda una sola vez; las filas sin elegir no cambian.
+Con "Regla por", se categorizan también las demás iguales y las que lleguen después.</p>
 
+{% if filas %}
+<form method="post" action="/bandeja" id="bandeja">
+<p><button>Guardar cambios</button></p>
+{% endif %}
 {% for t in filas %}
 {% set campo = campos[loop.index0] %}
-<form method="post" action="/bandeja/{{ t.id }}" class="pendiente">
+<div class="pendiente">
+  <input type="hidden" name="id" value="{{ t.id }}">
   <div class="detalle">
     <strong>{{ t.comercio_o_destinatario or "—" }}</strong>
     {% if t.iguales > 1 %}<span class="etiqueta">{{ t.iguales }} iguales</span>{% endif %}
@@ -16,21 +22,24 @@ Al guardar con "crear regla", se categorizan también las demás iguales y las q
     <br><span class="tenue">{{ t.fecha_hora | fecha_corta }} · {{ t.cuenta_nombre or "—" }}{% if t.descripcion %} · {{ t.descripcion }}{% endif %}</span>
   </div>
   <div class="num">{{ t.monto_centimos | monto(t.moneda) }}</div>
-  <select name="categoria_id">{{ opciones_categoria(categorias, None, "Categoría…") }}</select>
-  <select name="tipo">{{ opciones(tipos, t.tipo) }}</select>
-  <label class="check"><input type="checkbox" name="crear_regla" value="1" checked> Regla por</label>
-  <select name="campo" onchange="this.form.patron.value = this.selectedOptions[0].dataset.patron">
+  <select name="categoria_{{ t.id }}">{{ opciones_categoria(categorias, None, "Categoría…") }}</select>
+  <select name="tipo_{{ t.id }}">{{ opciones(tipos, t.tipo) }}</select>
+  <label class="check"><input type="checkbox" name="regla_{{ t.id }}" value="1" checked> Regla por</label>
+  <select name="campo_{{ t.id }}" onchange="this.form.elements['patron_{{ t.id }}'].value = this.selectedOptions[0].dataset.patron">
     <option value="{{ campo }}" data-patron="{{ t.comercio_o_destinatario or '' }}">{{ campo }}</option>
     {% if t.descripcion %}<option value="descripcion" data-patron="{{ t.descripcion }}">descripción</option>{% endif %}
   </select>
-  <input name="patron" value="{{ t.comercio_o_destinatario or '' }}" size="18" title="La regla aplica si el texto contiene esto">
-  <button>Guardar</button>
-  <button formaction="/bandeja/{{ t.id }}/ignorar" class="secundario">Ignorar</button>
+  <input name="patron_{{ t.id }}" value="{{ t.comercio_o_destinatario or '' }}" size="18" title="La regla aplica si el texto contiene esto">
+  <label class="check"><input type="checkbox" name="ignorar_{{ t.id }}" value="1"> Ignorar</label>
   <a href="/transacciones/{{ t.id }}?volver=/bandeja">editar</a>
-</form>
+</div>
 {% else %}
 <p>No hay transacciones pendientes. 🎉</p>
 {% endfor %}
+{% if filas %}
+<p><button>Guardar cambios</button></p>
+</form>
+{% endif %}
 
 {% if errores %}
 <h2>Eventos que no se pudieron interpretar ({{ errores | length }})</h2>

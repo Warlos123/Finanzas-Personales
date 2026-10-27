@@ -286,38 +286,61 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
                 tipos=movimientos.TIPOS,
             )
 
-    @app.post("/bandeja/{transaccion_id}")
-    async def decidir(request: Request, transaccion_id: int):
+    @app.post("/bandeja")
+    async def decidir(request: Request):
+        """Guarda de una vez todas las filas con decisión (categoría, tipo distinto de gasto o
+        "ignorar"). Primero las elecciones a mano, después las reglas nuevas sobre el resto."""
         formulario = await request.form()
-        categoria_id = _entero_opcional(formulario.get("categoria_id"))
-        tipo = formulario.get("tipo", "gasto")
-        if categoria_id is None and tipo == "gasto":
-            return _redirigir("/bandeja", error="Elige una categoría para un gasto")
+        ids = formulario.getlist("id")
+        guardadas = 0
+        ignoradas = 0
+        reglas_creadas = 0
+        otras = 0
+        problemas = []
         with abrir() as conn:
             try:
                 with conn:
-                    movimientos.categorizar(conn, transaccion_id, categoria_id, tipo)
-                    msg = "Guardado"
-                    if formulario.get("crear_regla") == "1":
+                    for i in range(len(ids)):
+                        transaccion_id = int(ids[i])
+                        sufijo = f"_{transaccion_id}"
+                        if formulario.get("ignorar" + sufijo) == "1":
+                            movimientos.ignorar(conn, transaccion_id)
+                            ignoradas += 1
+                            continue
+                        categoria_id = _entero_opcional(formulario.get("categoria" + sufijo))
+                        tipo = formulario.get("tipo" + sufijo, "gasto")
+                        if categoria_id is None and tipo == "gasto":
+                            continue
+                        movimientos.categorizar(conn, transaccion_id, categoria_id, tipo)
+                        guardadas += 1
+                        if formulario.get("regla" + sufijo) != "1":
+                            continue
                         tipo_forzado = None
                         if tipo != "gasto":
                             tipo_forzado = tipo
-                        reglas.crear_regla(
-                            conn, formulario.get("campo", ""), formulario.get("patron", ""),
-                            categoria_id, tipo_forzado,
-                        )
+                        try:
+                            reglas.crear_regla(
+                                conn, formulario.get("campo" + sufijo, ""),
+                                formulario.get("patron" + sufijo, ""), categoria_id, tipo_forzado,
+                            )
+                            reglas_creadas += 1
+                        except ValueError as error:
+                            problemas.append(str(error))
+                    if reglas_creadas:
                         otras = reglas.aplicar_reglas(conn)
-                        msg = f"Regla creada; {otras} transacciones más categorizadas"
             except ValueError as error:
                 return _redirigir("/bandeja", error=str(error))
-        return _redirigir("/bandeja", msg=msg)
-
-    @app.post("/bandeja/{transaccion_id}/ignorar")
-    def ignorar(transaccion_id: int):
-        with abrir() as conn:
-            with conn:
-                movimientos.ignorar(conn, transaccion_id)
-        return _redirigir("/bandeja", msg="Ignorada")
+        if guardadas == 0 and ignoradas == 0:
+            return _redirigir("/bandeja", error="No elegiste ninguna categoría (a los gastos les hace falta una)")
+        partes = [f"{guardadas} guardadas"]
+        if reglas_creadas:
+            partes.append(f"{reglas_creadas} reglas nuevas que categorizaron {otras} transacciones más")
+        if ignoradas:
+            partes.append(f"{ignoradas} ignoradas")
+        error = None
+        if problemas:
+            error = "Reglas no creadas: " + "; ".join(problemas)
+        return _redirigir("/bandeja", msg=", ".join(partes), error=error)
 
     @app.post("/reprocesar")
     def reprocesar():

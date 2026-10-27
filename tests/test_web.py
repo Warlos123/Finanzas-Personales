@@ -72,13 +72,14 @@ def test_aceptacion_categorizar_pendiente_crea_regla_y_aplica_a_la_siguiente(cli
     transporte = _id_categoria(ruta, "Transporte")
 
     respuesta = cliente.post(
-        f"/bandeja/{transaccion}",
-        data={"categoria_id": transporte, "tipo": "gasto", "crear_regla": "1",
-              "campo": "comercio", "patron": "SINPE TP SAN JOSE CR"},
+        "/bandeja",
+        data={"id": transaccion, f"categoria_{transaccion}": transporte, f"tipo_{transaccion}": "gasto",
+              f"regla_{transaccion}": "1", f"campo_{transaccion}": "comercio",
+              f"patron_{transaccion}": "SINPE TP SAN JOSE CR"},
         headers=ORIGEN,
     )
     assert respuesta.status_code == 200
-    assert "Regla creada" in respuesta.text
+    assert "1 reglas nuevas" in respuesta.text
     assert len(_consultar(ruta, "SELECT * FROM rules")) == 1
 
     conn = db.conectar(ruta)
@@ -90,14 +91,62 @@ def test_aceptacion_categorizar_pendiente_crea_regla_y_aplica_a_la_siguiente(cli
     assert "SINPE TP SAN JOSE CR" not in cliente.get("/bandeja").text
 
 
-def test_bandeja_exige_categoria_para_gasto_e_ignora(cliente, ruta):
+def test_bandeja_sin_elegir_nada_avisa_y_no_cambia(cliente, ruta):
     transaccion = _id_transaccion(ruta, "bcr:00200001:100000000010")
-    respuesta = cliente.post(f"/bandeja/{transaccion}", data={"tipo": "gasto"}, headers=ORIGEN)
-    assert "Elige una categoría" in respuesta.text
+    respuesta = cliente.post(
+        "/bandeja", data={"id": transaccion, f"tipo_{transaccion}": "gasto"}, headers=ORIGEN
+    )
+    assert "No elegiste ninguna categoría" in respuesta.text
+    fila = _consultar(ruta, "SELECT categoria_id, estado FROM transactions WHERE id = ?", (transaccion,))[0]
+    assert (fila["categoria_id"], fila["estado"]) == (None, "confirmada")
 
-    cliente.post(f"/bandeja/{transaccion}/ignorar", headers=ORIGEN)
-    estado = _consultar(ruta, "SELECT estado FROM transactions WHERE id = ?", (transaccion,))[0]["estado"]
-    assert estado == "ignorada"
+
+def test_bandeja_guarda_varias_filas_de_una_vez(cliente, ruta):
+    """Elegir categoría en varias filas y guardar una sola vez: no se pierde ninguna."""
+    super_ = _id_transaccion(ruta, "bcr:00200001:100000000010")
+    soda = _id_transaccion(ruta, "bcr:00200004:100000000013")
+    streaming = _id_transaccion(ruta, "bcr:00200002:100000000011")
+    sinpe = _id_transaccion(ruta, "sinpe:2026102215283000000000001")
+    supermercado = _id_categoria(ruta, "Supermercado")
+    comida = _id_categoria(ruta, "Comida")
+    datos = {
+        "id": [super_, soda, streaming, sinpe],
+        f"categoria_{super_}": supermercado, f"tipo_{super_}": "gasto",
+        f"categoria_{soda}": comida, f"tipo_{soda}": "gasto", f"regla_{soda}": "1",
+        f"campo_{soda}": "comercio", f"patron_{soda}": "SODA",
+        f"categoria_{streaming}": "", f"tipo_{streaming}": "gasto", f"ignorar_{streaming}": "1",
+        f"categoria_{sinpe}": "", f"tipo_{sinpe}": "gasto",
+    }
+
+    respuesta = cliente.post("/bandeja", data=datos, headers=ORIGEN)
+
+    assert "2 guardadas" in respuesta.text
+    assert "1 ignoradas" in respuesta.text
+    categorias = {}
+    filas = _consultar(ruta, "SELECT id, categoria_id, estado FROM transactions")
+    for i in range(len(filas)):
+        categorias[filas[i]["id"]] = (filas[i]["categoria_id"], filas[i]["estado"])
+    assert categorias[super_] == (supermercado, "confirmada")
+    assert categorias[soda] == (comida, "confirmada")
+    assert categorias[streaming] == (None, "ignorada")
+    assert categorias[sinpe] == (None, "confirmada")  # sin elegir: no cambia
+    assert len(_consultar(ruta, "SELECT * FROM rules")) == 1
+
+
+def test_bandeja_lo_elegido_a_mano_gana_sobre_una_regla_nueva(cliente, ruta):
+    soda = _id_transaccion(ruta, "bcr:00200004:100000000013")
+    super_ = _id_transaccion(ruta, "bcr:00200001:100000000010")
+    comida = _id_categoria(ruta, "Comida")
+    supermercado = _id_categoria(ruta, "Supermercado")
+    # La regla "E" de la soda también calzaría con "SUPERMERCADO EJEMPLO".
+    datos = {
+        "id": [soda, super_],
+        f"categoria_{soda}": comida, f"regla_{soda}": "1", f"campo_{soda}": "comercio", f"patron_{soda}": "E",
+        f"categoria_{super_}": supermercado,
+    }
+    cliente.post("/bandeja", data=datos, headers=ORIGEN)
+    fila = _consultar(ruta, "SELECT categoria_id FROM transactions WHERE id = ?", (super_,))[0]
+    assert fila["categoria_id"] == supermercado
 
 
 def test_editar_transaccion(cliente, ruta):
