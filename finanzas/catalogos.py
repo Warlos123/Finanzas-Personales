@@ -86,3 +86,26 @@ def borrar_categoria(conn: sqlite3.Connection, categoria_id: int) -> None:
     conn.execute("DELETE FROM budgets WHERE categoria_id = ?", (categoria_id,))
     conn.execute("UPDATE categories SET padre_id = NULL WHERE padre_id = ?", (categoria_id,))
     conn.execute("DELETE FROM categories WHERE id = ?", (categoria_id,))
+
+
+def presupuestos(conn: sqlite3.Connection) -> dict:
+    """categoria_id -> monto mensual en céntimos (CRC)."""
+    filas = conn.execute("SELECT categoria_id, monto_mensual_centimos FROM budgets").fetchall()
+    resultado = {}
+    for i in range(len(filas)):
+        resultado[filas[i]["categoria_id"]] = filas[i]["monto_mensual_centimos"]
+    return resultado
+
+
+def guardar_presupuesto(conn: sqlite3.Connection, categoria_id: int, monto_centimos: int | None) -> None:
+    """None o 0 quita el presupuesto."""
+    if monto_centimos is None or monto_centimos == 0:
+        conn.execute("DELETE FROM budgets WHERE categoria_id = ?", (categoria_id,))
+        return
+    if monto_centimos < 0:
+        raise ValueError("El presupuesto no puede ser negativo")
+    conn.execute(
+        "INSERT INTO budgets (categoria_id, monto_mensual_centimos, moneda) VALUES (?, ?, 'CRC') "
+        "ON CONFLICT (categoria_id) DO UPDATE SET monto_mensual_centimos = excluded.monto_mensual_centimos",
+        (categoria_id, monto_centimos),
+    )

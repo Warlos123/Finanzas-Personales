@@ -60,6 +60,19 @@
   </table>
 </section>
 <section>
+  {% if presupuestos %}
+  <h2>Presupuestos</h2>
+  <table>
+  {% for p in presupuestos %}
+    <tr>
+      <td>{{ p.nombre }}</td>
+      <td class="barra"><span class="{{ p.nivel }}" style="width: {% if p.proporcion > 1 %}100{% else %}{{ (p.proporcion * 100) | round(1) }}{% endif %}%"></span></td>
+      <td class="num">{{ p.gastado | monto }} de {{ p.presupuesto | monto }}</td>
+      <td class="num {% if p.nivel != 'ok' %}negativo{% endif %}">{{ p.proporcion | porcentaje }}</td>
+    </tr>
+  {% endfor %}
+  </table>
+  {% endif %}
   <h2>Top comercios</h2>
   <table>
   {% for nombre, valor, cantidad in r.top_comercios %}

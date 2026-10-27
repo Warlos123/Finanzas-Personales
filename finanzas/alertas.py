@@ -5,14 +5,16 @@
 - Teléfono: aviso si pasan DIAS_SIN_TELEFONO sin eventos nuevos. Se mide por el último evento
   importado (o, si nunca llegó uno, por la fecha en que se configuró la carpeta). Se avisa una
   sola vez por cada "último evento"; un evento nuevo rearma el aviso.
+- Presupuestos: un aviso por categoría al llegar al 80% y otro al pasar el 100% en el mes.
 """
 
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 
-from finanzas import db, movimientos, telefono
+from finanzas import db, formato, metricas, movimientos, telefono
 from finanzas.notificar import notificar
+from finanzas.tiempo import ahora_iso
 
 DIAS_SIN_TELEFONO = 3
 AJUSTE_AVISO_TELEFONO = "aviso_telefono_para"
@@ -95,3 +97,29 @@ def avisar_telefono(conn: sqlite3.Connection, ahora: datetime) -> bool:
     with conn:
         db.guardar_ajuste(conn, AJUSTE_AVISO_TELEFONO, referencia)
     return True
+
+
+def avisar_presupuestos(conn: sqlite3.Connection, hoy) -> int:
+    """Un aviso por categoría y umbral (80% y 100%) en el mes en curso. Devuelve cuántos avisó."""
+    mes = formato.mes_de(hoy)
+    lineas = []
+    estados = metricas.estado_presupuestos(conn, mes)
+    for i in range(len(estados)):
+        presupuesto = estados[i]
+        if presupuesto.nivel == "ok":
+            continue
+        umbral = 80
+        if presupuesto.nivel == "excedido":
+            umbral = 100
+        clave = f"aviso_presupuesto:{mes}:{presupuesto.categoria_id}:{umbral}"
+        if db.leer_ajuste(conn, clave) is not None:
+            continue
+        lineas.append(
+            f"{presupuesto.nombre}: {formato.porcentaje(presupuesto.proporcion)} "
+            f"({formato.formatear_monto(presupuesto.gastado)} de {formato.formatear_monto(presupuesto.presupuesto)})"
+        )
+        with conn:
+            db.guardar_ajuste(conn, clave, ahora_iso())
+    if lineas:
+        notificar("Finanzas: presupuesto", "\n".join(lineas))
+    return len(lineas)

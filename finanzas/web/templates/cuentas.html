@@ -27,12 +27,13 @@
 
 <h1>Categorías</h1>
 <table class="lista">
-  <thead><tr><th>Nombre</th><th>Dentro de</th><th></th></tr></thead>
+  <thead><tr><th>Nombre</th><th>Dentro de</th><th>Presupuesto mensual (₡)</th><th></th></tr></thead>
   {% for c in categorias %}
   <tr>
     <td><form id="cat-{{ c.id }}" method="post" action="/categorias/{{ c.id }}"></form>
         <input form="cat-{{ c.id }}" name="nombre" value="{{ c.nombre }}" required></td>
     <td><select form="cat-{{ c.id }}" name="padre_id">{{ opciones_categoria(categorias, c.padre_id, "—") }}</select></td>
+    <td><input form="cat-{{ c.id }}" name="presupuesto" placeholder="sin presupuesto"{% if c.id in presupuestos %} value="{{ presupuestos[c.id] | centimos_texto }}"{% endif %}></td>
     <td><button form="cat-{{ c.id }}">Guardar</button>
         <button form="cat-{{ c.id }}" formaction="/categorias/{{ c.id }}/borrar" class="peligro" onclick="return confirm('¿Borrar la categoría? Sus transacciones vuelven a la bandeja.')">Borrar</button></td>
   </tr>
@@ -41,6 +42,7 @@
     <td><form id="cat-nueva" method="post" action="/categorias"></form>
         <input form="cat-nueva" name="nombre" placeholder="Nueva categoría" required></td>
     <td><select form="cat-nueva" name="padre_id">{{ opciones_categoria(categorias, None, "—") }}</select></td>
+    <td><input form="cat-nueva" name="presupuesto" placeholder="sin presupuesto"></td>
     <td><button form="cat-nueva">Agregar</button></td>
   </tr>
 </table>

@@ -190,3 +190,70 @@ def resumen_mes(conn: sqlite3.Connection, mes: str, hoy: date) -> ResumenMes:
     elif (anio, numero) < (hoy.year, hoy.month):
         resumen.dias_transcurridos = resumen.dias_mes
     return resumen
+
+
+@dataclass
+class Presupuesto:
+    categoria_id: int
+    nombre: str
+    presupuesto: int
+    gastado: int
+
+    @property
+    def proporcion(self) -> float:
+        if self.presupuesto <= 0:
+            return 0.0
+        return self.gastado / self.presupuesto
+
+    @property
+    def nivel(self) -> str:
+        """'excedido' desde 100%, 'alerta' desde 80%, si no 'ok'."""
+        if self.proporcion >= 1.0:
+            return "excedido"
+        if self.proporcion >= 0.8:
+            return "alerta"
+        return "ok"
+
+
+def estado_presupuestos(conn: sqlite3.Connection, mes: str) -> list[Presupuesto]:
+    """Gasto del mes contra el presupuesto de cada categoría que tenga uno.
+    El gasto de una categoría incluye el de sus subcategorías directas."""
+    cambio = tipo_cambio(conn)
+    inicio, fin = rango_mes(mes)
+    padres = {}
+    categorias = conn.execute("SELECT id, padre_id FROM categories").fetchall()
+    for i in range(len(categorias)):
+        padres[categorias[i]["id"]] = categorias[i]["padre_id"]
+
+    gastado = {}
+    filas = conn.execute(
+        """SELECT categoria_id, moneda, SUM(monto_centimos) AS total FROM transactions
+           WHERE tipo = 'gasto' AND estado != 'ignorada' AND moneda IS NOT NULL
+             AND categoria_id IS NOT NULL AND fecha_hora >= ? AND fecha_hora < ?
+           GROUP BY categoria_id, moneda""",
+        (inicio, fin),
+    ).fetchall()
+    for i in range(len(filas)):
+        monto = _en_colones(filas[i]["total"], filas[i]["moneda"], cambio)
+        if monto is None:
+            continue
+        categoria = filas[i]["categoria_id"]
+        gastado[categoria] = gastado.get(categoria, 0) + monto
+        padre = padres.get(categoria)
+        if padre is not None:
+            gastado[padre] = gastado.get(padre, 0) + monto
+
+    resultado = []
+    presupuestos = conn.execute(
+        """SELECT b.categoria_id, b.monto_mensual_centimos, c.nombre FROM budgets b
+           JOIN categories c ON c.id = b.categoria_id ORDER BY c.nombre"""
+    ).fetchall()
+    for i in range(len(presupuestos)):
+        categoria = presupuestos[i]["categoria_id"]
+        resultado.append(Presupuesto(
+            categoria_id=categoria,
+            nombre=presupuestos[i]["nombre"],
+            presupuesto=presupuestos[i]["monto_mensual_centimos"],
+            gastado=gastado.get(categoria, 0),
+        ))
+    return resultado

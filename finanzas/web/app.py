@@ -179,6 +179,7 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
                 anterior=formato.mes_desplazado(mes, -1), siguiente=formato.mes_desplazado(mes, 1),
                 hay_tipo_cambio=metricas.tipo_cambio(conn) is not None,
                 sinc=alertas.estado(conn, datetime.now(ZONA_CR)),
+                presupuestos=metricas.estado_presupuestos(conn, mes),
             )
 
     # --- Transacciones ---
@@ -430,6 +431,7 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
             return mostrar(
                 request, conn, "cuentas.html", "cuentas", cuentas=catalogos.cuentas(conn),
                 categorias=catalogos.categorias(conn), tipos_cuenta=catalogos.TIPOS_CUENTA,
+                presupuestos=catalogos.presupuestos(conn),
                 monedas=movimientos.MONEDAS,
                 tipo_cambio=db.leer_ajuste(conn, metricas.AJUSTE_TIPO_CAMBIO, ""),
             )
@@ -460,10 +462,15 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
         try:
             with abrir() as conn:
                 with conn:
-                    catalogos.guardar_categoria(
+                    guardada = catalogos.guardar_categoria(
                         conn, categoria_id, formulario.get("nombre", ""),
                         _entero_opcional(formulario.get("padre_id")),
                     )
+                    texto_presupuesto = _texto_opcional(formulario.get("presupuesto"))
+                    presupuesto = None
+                    if texto_presupuesto is not None:
+                        presupuesto = formato.monto_desde_texto(texto_presupuesto)
+                    catalogos.guardar_presupuesto(conn, guardada, presupuesto)
         except ValueError as error:
             return _redirigir("/cuentas", error=str(error))
         return _redirigir("/cuentas", msg="Categoría guardada")

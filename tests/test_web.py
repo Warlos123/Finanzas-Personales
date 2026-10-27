@@ -189,3 +189,16 @@ def test_exportar_csv_con_filtros(cliente):
     assert "SODA LA ESQUINA" in lineas[1]
     assert ",1500.00,CRC," in lineas[1]
     assert "Exportar a CSV" in cliente.get("/transacciones?mes=2026-10").text
+
+
+def test_presupuesto_desde_categorias_y_en_el_dashboard(cliente, ruta):
+    comida = _id_categoria(ruta, "Comida")
+    cliente.post(f"/categorias/{comida}", data={"nombre": "Comida", "padre_id": "", "presupuesto": "50,000"},
+                 headers=ORIGEN)
+    assert _consultar(ruta, "SELECT monto_mensual_centimos FROM budgets")[0][0] == 5000000
+    assert 'value="50000.00"' in cliente.get("/cuentas").text
+    assert "Presupuestos" in cliente.get("/?mes=2026-10").text
+
+    cliente.post(f"/categorias/{comida}", data={"nombre": "Comida", "padre_id": "", "presupuesto": ""},
+                 headers=ORIGEN)
+    assert _consultar(ruta, "SELECT COUNT(*) FROM budgets")[0][0] == 0

@@ -128,3 +128,5 @@ form.pendiente .detalle { flex: 1 1 260px; }
 table.lista td input:not([type=checkbox]), table.lista td select { width: 100%; min-width: 4em; }
 table.lista td input[type=number] { max-width: 6em; }
 table.lista td button { margin: 1px 0; }
+td.barra span.alerta { background: var(--alerta); }
+td.barra span.excedido { background: var(--negativo); }
