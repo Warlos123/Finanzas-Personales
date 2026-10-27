@@ -52,5 +52,7 @@
   <label>Colones por dólar <input name="tipo_cambio" value="{{ tipo_cambio }}" placeholder="505.50"></label>
   <button>Guardar</button>
 </form>
-<p class="tenue">Si está definido, los gastos e ingresos en dólares se convierten a colones en el dashboard. Vacío = se muestran aparte.</p>
+<p class="tenue">Se actualiza solo una vez al día con el tipo de cambio de venta de referencia del BCCR (API de Hacienda){% if tipo_cambio_actualizado %}; última actualización: {{ tipo_cambio_actualizado | fecha_corta }}{% endif %}.
+Si lo cambias a mano, se mantiene hasta la actualización del día siguiente.
+Con tipo de cambio, los gastos e ingresos en dólares se convierten a colones en el dashboard; sin él, se muestran aparte.</p>
 {% endblock %}

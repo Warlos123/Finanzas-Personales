@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import urllib.request
+
 import pytest
 
 from finanzas import db
@@ -22,3 +24,12 @@ def conn(tmp_path):
     conexion = db.conectar(tmp_path / "prueba.db")
     yield conexion
     conexion.close()
+
+
+@pytest.fixture(autouse=True)
+def sin_internet(monkeypatch):
+    """Ninguna prueba sale a internet (p. ej. el tipo de cambio de Hacienda en `importar`)."""
+    def sin_red(*args, **kwargs):
+        raise OSError("sin red en las pruebas")
+
+    monkeypatch.setattr(urllib.request, "urlopen", sin_red)

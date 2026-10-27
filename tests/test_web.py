@@ -1,10 +1,13 @@
+from datetime import datetime
+
 import pytest
 
 fastapi = pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from conftest import leer_evento_sms, leer_fixture  # noqa: E402
-from finanzas import db, ingesta  # noqa: E402
+from finanzas import db, ingesta, tipo_cambio  # noqa: E402
+from finanzas.tiempo import ZONA_CR  # noqa: E402
 from finanzas.web.app import crear_app  # noqa: E402
 
 LOCAL = "http://127.0.0.1:8765"
@@ -284,3 +287,26 @@ def test_css_con_version_para_no_usar_cache_vieja(cliente):
     assert "/static/estilo.css?v=" in pagina
     svg = cliente.get("/graficos?mes=2026-10").text
     assert 'class="zona"' in svg and 'fill="transparent"' in svg
+
+
+def test_cuentas_muestra_cuando_se_actualizo_el_tipo_de_cambio(cliente, ruta):
+    assert "última actualización" not in cliente.get("/cuentas").text
+    conn = db.conectar(ruta)
+    with conn:
+        db.guardar_ajuste(conn, "tipo_cambio_usd", "508.12")
+        db.guardar_ajuste(conn, "tipo_cambio_actualizado", "2026-10-27T06:05:00-06:00")
+    conn.close()
+    pagina = cliente.get("/cuentas").text
+    assert 'value="508.12"' in pagina
+    assert "última actualización: 27/10" in pagina
+
+
+def test_tipo_de_cambio_a_mano_no_se_pisa_el_mismo_dia(cliente, ruta):
+    cliente.post("/ajustes/tipo-cambio", data={"tipo_cambio": "510"}, headers=ORIGEN)
+    conn = db.conectar(ruta)
+    try:
+        # Si consultara Hacienda, el conftest haría fallar la red (OSError).
+        assert tipo_cambio.actualizar(conn, datetime.now(ZONA_CR)) is None
+        assert db.leer_ajuste(conn, "tipo_cambio_usd") == "510"
+    finally:
+        conn.close()

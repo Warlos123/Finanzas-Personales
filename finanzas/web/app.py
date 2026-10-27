@@ -19,9 +19,9 @@ from fastapi.templating import Jinja2Templates
 
 from finanzas import (
     alertas, catalogos, db, formato, graficos, ingesta, metricas, movimientos, recurrentes, reglas,
-    suscripciones,
+    suscripciones, tipo_cambio,
 )
-from finanzas.tiempo import ZONA_CR
+from finanzas.tiempo import ZONA_CR, ahora_iso
 
 PUERTO = 8765
 DIR_WEB = Path(__file__).parent
@@ -486,6 +486,7 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
                 presupuestos=catalogos.presupuestos(conn),
                 monedas=movimientos.MONEDAS,
                 tipo_cambio=db.leer_ajuste(conn, metricas.AJUSTE_TIPO_CAMBIO, ""),
+                tipo_cambio_actualizado=db.leer_ajuste(conn, tipo_cambio.AJUSTE_ACTUALIZADO),
             )
 
     async def _guardar_cuenta(request: Request, cuenta_id: int | None):
@@ -553,6 +554,9 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
                 with conn:
                     db.guardar_ajuste(conn, metricas.AJUSTE_TIPO_CAMBIO, None)
                 return _redirigir("/cuentas", error="Tipo de cambio inválido (ej. 505.50)")
+            # Cuenta como la actualización del día: Hacienda no lo pisa hasta mañana.
+            with conn:
+                db.guardar_ajuste(conn, tipo_cambio.AJUSTE_ACTUALIZADO, ahora_iso())
         return _redirigir("/cuentas", msg="Tipo de cambio guardado")
 
     return app

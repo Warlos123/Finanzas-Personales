@@ -8,7 +8,7 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-from finanzas import alertas, db, gmail, ingesta, respaldos, resumen, telefono
+from finanzas import alertas, db, gmail, ingesta, respaldos, resumen, telefono, tipo_cambio
 from finanzas.llavero import ErrorLlavero
 from finanzas.tiempo import ZONA_CR, ahora_iso
 
@@ -99,9 +99,10 @@ def _importar_gmail(conn, desde) -> int:
 
 
 def _tareas_posteriores(conn, ruta_db, antes, inicio: str) -> None:
-    """Alertas, backup diario y resumen mensual. Si una falla, las demás igual corren."""
+    """Tipo de cambio, alertas, backup diario y resumen mensual. Si una falla, las demás igual corren."""
     ahora = datetime.now(ZONA_CR)
     tareas = (
+        ("tipo de cambio", lambda: tipo_cambio.actualizar(conn, ahora)),
         ("aviso de novedades", lambda: alertas.avisar_novedades(conn, antes)),
         ("aviso del teléfono", lambda: alertas.avisar_telefono(conn, ahora)),
         ("aviso de presupuestos", lambda: alertas.avisar_presupuestos(conn, ahora.date())),
