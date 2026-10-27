@@ -89,4 +89,22 @@
   </table>
 </section>
 </div>
+
+{% if suscripciones %}
+<section>
+  <h2>Suscripciones detectadas</h2>
+  <table class="lista">
+    <thead><tr><th>Comercio</th><th class="num">Monto típico</th><th class="num">Cobros</th><th>Último</th><th>Próximo (estimado)</th></tr></thead>
+    {% for s in suscripciones %}
+    <tr>
+      <td>{{ s.comercio }}</td>
+      <td class="num">{{ s.monto_tipico | monto(s.moneda) }}</td>
+      <td class="num">{{ s.cobros }}</td>
+      <td>{{ s.ultimo_cobro.strftime("%d/%m/%Y") }}</td>
+      <td>{{ s.proximo_cobro.strftime("%d/%m/%Y") }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+{% endif %}
 {% endblock %}
