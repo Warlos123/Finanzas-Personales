@@ -13,3 +13,14 @@
 {% for c in cuentas %}<option value="{{ c.id }}"{% if c.id == seleccion %} selected{% endif %}>{{ c.nombre }}</option>
 {% endfor %}
 {%- endmacro -%}
+{% macro campos_ahorro(a, tipos, nombres, monedas) -%}
+<label>Tipo <select name="tipo">{% for t in tipos %}<option value="{{ t }}"{% if a and a.tipo == t %} selected{% endif %}>{{ nombres[t] }}</option>{% endfor %}</select></label>
+<label>Nombre <input name="nombre" value="{% if a %}{{ a.nombre }}{% endif %}" placeholder="p. ej. CDP BCR 6 meses, VOO" required></label>
+<label>Moneda <select name="moneda">{% for m in monedas %}<option value="{{ m }}"{% if (a and a.moneda == m) or (not a and m == "CRC") %} selected{% endif %}>{{ m }}</option>{% endfor %}</select></label>
+<label>Monto invertido <input name="invertido" value="{% if a %}{{ a.invertido_centimos | centimos_texto }}{% endif %}" placeholder="1,000,000.00" required></label>
+<label>Valor actual (vacío = lo invertido) <input name="valor_actual" value="{% if a %}{{ a.valor_actual_centimos | centimos_texto }}{% endif %}"></label>
+<label>Tasa anual % (CDP) <input name="tasa" value="{% if a and a.tasa_anual %}{{ a.tasa_anual }}{% endif %}" placeholder="5.25"></label>
+<label>Fecha de inicio <input type="date" name="inicio" value="{% if a and a.inicio %}{{ a.inicio }}{% endif %}"></label>
+<label>Vence (CDP) <input type="date" name="vence" value="{% if a and a.vence %}{{ a.vence }}{% endif %}"></label>
+<label>Notas <input name="notas" value="{% if a and a.notas %}{{ a.notas }}{% endif %}"></label>
+{%- endmacro -%}

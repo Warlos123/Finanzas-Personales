@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "macros.html" import campos_ahorro %}
+{% block titulo %}Finanzas · Ahorros{% endblock %}
+{% block contenido %}
+<h1>Ahorros</h1>
+<div class="tarjetas">
+  <div class="tarjeta"><span>Total ahorrado</span><strong>{{ resumen.total | monto }}</strong>
+    {% if resumen.sin_convertir %}<small>+ {{ resumen.sin_convertir | monto("USD") }} sin convertir</small>{% endif %}</div>
+  {% for t in tipos %}
+  <div class="tarjeta"><span>En {{ nombres[t] }}</span><strong>{{ resumen.por_tipo[t] | monto }}</strong></div>
+  {% endfor %}
+  <div class="tarjeta"><span>Ganancia</span><strong{% if resumen.ganancia < 0 %} class="negativo"{% endif %}>{{ resumen.ganancia | monto }}</strong>
+    {% if resumen.rendimiento is not none %}<small>{{ resumen.rendimiento | porcentaje }} sobre lo invertido</small>{% endif %}</div>
+</div>
+{% if resumen.sin_convertir %}<p class="tenue">Los ahorros en dólares no entran al total hasta que haya <a href="/cuentas">tipo de cambio</a>.</p>{% endif %}
+
+<table class="lista">
+  <thead><tr><th>Tipo</th><th>Nombre</th><th class="num">Invertido</th><th class="num">Valor actual</th><th class="num">Ganancia</th>
+    <th>Tasa</th><th>Vence</th><th>Actualizado</th><th></th></tr></thead>
+  {% for a in lista %}
+  <tr>
+    <td>{{ nombres[a.fila.tipo] }}</td>
+    <td>{{ a.fila.nombre }}{% if a.fila.notas %}<br><span class="tenue">{{ a.fila.notas }}</span>{% endif %}</td>
+    <td class="num">{{ a.fila.invertido_centimos | monto(a.fila.moneda) }}</td>
+    <td class="num">{{ a.fila.valor_actual_centimos | monto(a.fila.moneda) }}</td>
+    <td class="num{% if a.ganancia < 0 %} negativo{% endif %}">{{ a.ganancia | monto(a.fila.moneda) }}
+      {% if a.rendimiento is not none %}<br><span class="tenue">{{ a.rendimiento | porcentaje }}</span>{% endif %}</td>
+    <td>{% if a.fila.tasa_anual %}{{ a.fila.tasa_anual }}%{% else %}—{% endif %}</td>
+    <td>{% if a.fila.vence %}{{ a.fila.vence | fecha_dia }}<br>
+      {% if a.dias_para_vencer < 0 %}<span class="etiqueta alerta">vencido</span>
+      {% elif a.dias_para_vencer == 0 %}<span class="etiqueta alerta">vence hoy</span>
+      {% elif a.dias_para_vencer <= 30 %}<span class="etiqueta alerta">en {{ a.dias_para_vencer }} días</span>
+      {% else %}<span class="tenue">en {{ a.dias_para_vencer }} días</span>{% endif %}
+    {% else %}—{% endif %}</td>
+    <td>{{ a.fila.actualizado_en | fecha_corta }}</td>
+    <td><a href="/ahorros/{{ a.fila.id }}">editar</a></td>
+  </tr>
+  {% else %}
+  <tr><td class="tenue" colspan="9">Todavía no hay ahorros: agrega el primero abajo.</td></tr>
+  {% endfor %}
+</table>
+
+<h2>Agregar</h2>
+<form method="post" action="/ahorros" class="ficha">
+  {{ campos_ahorro(None, tipos, nombres, monedas) }}
+  <button>Agregar</button>
+</form>
+<p class="tenue">Para el S&amp;P 500, actualiza el valor actual cuando revises tu cuenta de inversión. Los CDP que vencen en 30 días o menos se marcan.</p>
+{% endblock %}

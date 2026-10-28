@@ -340,3 +340,28 @@ def test_reconciliar_subir_ver_y_agregar(cliente, ruta, monkeypatch):
     assert _consultar(ruta, "SELECT COUNT(*) FROM transactions WHERE llave_unica LIKE 'estado:%'")[0][0] == 1
     assert "01/10/2026 al 31/10/2026" in cliente.get("/reconciliar").text
     assert "no existe" in cliente.get("/reconciliar/999").text
+
+
+def test_ahorros_agregar_editar_y_borrar(cliente, ruta):
+    assert "Todavía no hay ahorros" in cliente.get("/ahorros").text
+    respuesta = cliente.post(
+        "/ahorros",
+        data={"tipo": "cdp", "nombre": "CDP BCR 6 meses", "moneda": "CRC", "invertido": "1,000,000",
+              "valor_actual": "", "tasa": "5.25", "inicio": "2026-05-01", "vence": "2026-11-01"},
+        headers=ORIGEN,
+    )
+    assert "Ahorro agregado" in respuesta.text
+    assert "CDP BCR 6 meses" in respuesta.text and "5.25%" in respuesta.text
+    ahorro_id = _consultar(ruta, "SELECT id FROM savings")[0]["id"]
+    assert 'value="1000000.00"' in cliente.get(f"/ahorros/{ahorro_id}").text
+
+    error = cliente.post(f"/ahorros/{ahorro_id}", data={"tipo": "cdp", "nombre": "x", "invertido": "abc"}, headers=ORIGEN)
+    assert "Monto inválido" in error.text
+    cliente.post(
+        f"/ahorros/{ahorro_id}",
+        data={"tipo": "sp500", "nombre": "VOO", "moneda": "CRC", "invertido": "500,000", "valor_actual": "550,000"},
+        headers=ORIGEN,
+    )
+    assert _consultar(ruta, "SELECT tipo, valor_actual_centimos FROM savings")[0][:] == ("sp500", 55000000)
+    assert "Ahorro borrado" in cliente.post(f"/ahorros/{ahorro_id}/borrar", headers=ORIGEN).text
+    assert "no existe" in cliente.get(f"/ahorros/{ahorro_id}").text

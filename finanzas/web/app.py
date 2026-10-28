@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from finanzas import (
-    alertas, catalogos, db, estado_cuenta, formato, graficos, ingesta, metricas, movimientos,
+    ahorros, alertas, catalogos, db, estado_cuenta, formato, graficos, ingesta, metricas, movimientos,
     reconciliacion, recurrentes, reglas, suscripciones, tipo_cambio,
 )
 from finanzas.tiempo import ZONA_CR, ahora_iso
@@ -421,6 +421,70 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
             with conn:
                 recurrentes.borrar(conn, recurrente_id)
         return _redirigir("/ingresos", msg="Recurrente borrado (los ingresos ya generados se quedan)")
+
+    # --- Ahorros ---
+
+    def _datos_ahorro(formulario) -> ahorros.DatosAhorro:
+        valor_actual = _texto_opcional(formulario.get("valor_actual"))
+        if valor_actual is not None:
+            valor_actual = formato.monto_desde_texto(valor_actual)
+        return ahorros.DatosAhorro(
+            tipo=formulario.get("tipo", ""), nombre=formulario.get("nombre", ""),
+            moneda=formulario.get("moneda", "CRC"),
+            invertido_centimos=formato.monto_desde_texto(formulario.get("invertido", "")),
+            valor_actual_centimos=valor_actual, tasa_anual=_texto_opcional(formulario.get("tasa")),
+            inicio=_texto_opcional(formulario.get("inicio")), vence=_texto_opcional(formulario.get("vence")),
+            notas=_texto_opcional(formulario.get("notas")),
+        )
+
+    def _contexto_ahorros() -> dict:
+        return {"tipos": ahorros.TIPOS, "nombres": ahorros.NOMBRES_TIPO, "monedas": movimientos.MONEDAS}
+
+    @app.get("/ahorros")
+    def pagina_ahorros(request: Request):
+        with abrir() as conn:
+            lista = ahorros.listar(conn, _hoy())
+            return mostrar(
+                request, conn, "ahorros.html", "ahorros", lista=lista, resumen=ahorros.resumir(conn, lista),
+                **_contexto_ahorros(),
+            )
+
+    @app.post("/ahorros")
+    async def crear_ahorro(request: Request):
+        formulario = await request.form()
+        try:
+            with abrir() as conn:
+                with conn:
+                    ahorros.guardar(conn, None, _datos_ahorro(formulario))
+        except ValueError as error:
+            return _redirigir("/ahorros", error=str(error))
+        return _redirigir("/ahorros", msg="Ahorro agregado")
+
+    @app.get("/ahorros/{ahorro_id}")
+    def ver_ahorro(request: Request, ahorro_id: int):
+        with abrir() as conn:
+            fila = ahorros.obtener(conn, ahorro_id)
+            if fila is None:
+                return _redirigir("/ahorros", error="Ese ahorro no existe")
+            return mostrar(request, conn, "ahorro.html", "ahorros", a=fila, **_contexto_ahorros())
+
+    @app.post("/ahorros/{ahorro_id}")
+    async def editar_ahorro(request: Request, ahorro_id: int):
+        formulario = await request.form()
+        try:
+            with abrir() as conn:
+                with conn:
+                    ahorros.guardar(conn, ahorro_id, _datos_ahorro(formulario))
+        except ValueError as error:
+            return _redirigir(f"/ahorros/{ahorro_id}", error=str(error))
+        return _redirigir("/ahorros", msg="Ahorro guardado")
+
+    @app.post("/ahorros/{ahorro_id}/borrar")
+    def borrar_ahorro(ahorro_id: int):
+        with abrir() as conn:
+            with conn:
+                ahorros.borrar(conn, ahorro_id)
+        return _redirigir("/ahorros", msg="Ahorro borrado")
 
     # --- Reconciliación con el estado de cuenta ---
 
