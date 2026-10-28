@@ -162,65 +162,50 @@ table.ranking td.nombre { width: 40%; }
 table.ranking td.barra { width: 45%; }
 table.ranking td.barra span { height: 12px; border-radius: 0 4px 4px 0; background: var(--acento); }
 
-/* Animaciones (pedido del usuario): cortas y solo al entrar a una página. Se usa
-   animation-fill-mode: backwards para que al terminar no quede ningún estilo fijado
-   (así los :hover siguen funcionando). Si el sistema pide menos movimiento, no hay. */
-@keyframes entrar { from { opacity: 0; transform: translateY(8px); } }
-@keyframes aparecer { from { opacity: 0; } }
-@keyframes crecer-x { from { transform: scaleX(0); } }
+/* Animaciones (pedido del usuario). El texto y los números no se ocultan ni se mueven al
+   cargar: animar la opacidad de filas y de toda la página hacía parpadear la información en
+   WebKitGTK. Solo se animan las marcas gráficas, sin animation-delay (el escalonado sale de
+   duraciones distintas) y con propiedades que se pintan sin capas aparte (clip-path,
+   background-size, transform dentro del SVG). Si el sistema pide menos movimiento, no hay. */
+@keyframes revelar-x { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @keyframes crecer-y { from { transform: scaleY(0); } }
+@keyframes aparecer-al-final { 0%, 70% { opacity: 0; } }
+@keyframes pestana-activa { from { background-size: 0% 100%; color: var(--texto); } }
 
-/* Orden de cada elemento entre sus hermanos, para escalonar la entrada (máx. 12 pasos). */
-:is(.tarjeta, tr, div.pendiente, .columna):nth-of-type(2) { --i: 1; }
-:is(.tarjeta, tr, div.pendiente, .columna):nth-of-type(3) { --i: 2; }
-:is(.tarjeta, tr, div.pendiente, .columna):nth-of-type(4) { --i: 3; }
-:is(.tarjeta, tr, div.pendiente, .columna):nth-of-type(5) { --i: 4; }
-:is(.tarjeta, tr, div.pendiente, .columna):nth-of-type(6) { --i: 5; }
-:is(.tarjeta, tr, div.pendiente, .columna):nth-of-type(7) { --i: 6; }
-:is(.tarjeta, tr, div.pendiente, .columna):nth-of-type(8) { --i: 7; }
-:is(.tarjeta, tr, div.pendiente, .columna):nth-of-type(9) { --i: 8; }
-:is(.tarjeta, tr, div.pendiente, .columna):nth-of-type(10) { --i: 9; }
-:is(.tarjeta, tr, div.pendiente, .columna):nth-of-type(11) { --i: 10; }
-:is(.tarjeta, tr, div.pendiente, .columna):nth-of-type(n+12) { --i: 11; }
+/* Orden entre hermanos, para escalonar barras y columnas (máx. 12 pasos). */
+:is(tr, .columna):nth-of-type(2) { --i: 1; }
+:is(tr, .columna):nth-of-type(3) { --i: 2; }
+:is(tr, .columna):nth-of-type(4) { --i: 3; }
+:is(tr, .columna):nth-of-type(5) { --i: 4; }
+:is(tr, .columna):nth-of-type(6) { --i: 5; }
+:is(tr, .columna):nth-of-type(7) { --i: 6; }
+:is(tr, .columna):nth-of-type(8) { --i: 7; }
+:is(tr, .columna):nth-of-type(9) { --i: 8; }
+:is(tr, .columna):nth-of-type(10) { --i: 9; }
+:is(tr, .columna):nth-of-type(11) { --i: 10; }
+:is(tr, .columna):nth-of-type(n+12) { --i: 11; }
 
-/* Pestañas: cambio de color suave y un leve "clic". */
-nav a { transition: background-color 0.2s ease, color 0.2s ease, transform 0.1s ease; }
-nav a:hover:not(.activo) { background: var(--fondo); }
-nav a:active { transform: scale(0.96); }
-button { transition: filter 0.15s ease, transform 0.1s ease; }
+/* Pestañas: la activa se llena de color al entrar; las demás cambian de fondo suavemente. */
+nav a { transition: background-color 0.2s ease, color 0.2s ease; }
+nav a:hover:not(.activo) { background-color: var(--fondo); }
+nav a.activo {
+  background: linear-gradient(var(--acento), var(--acento)) center / 100% 100% no-repeat;
+  animation: pestana-activa 0.35s ease-out;
+}
+button { transition: filter 0.15s ease; }
 button:hover { filter: brightness(1.08); }
-button:active { transform: scale(0.97); }
+.tarjeta { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.tarjeta:hover { border-color: var(--acento); box-shadow: 0 4px 14px rgb(0 0 0 / 0.08); }
 
-/* Al cambiar de pestaña, el contenido entra deslizándose. */
-main { animation: entrar 0.3s ease-out backwards; }
-.aviso, .error { animation: entrar 0.3s 0.1s ease-out backwards; }
-
-/* Datos: tarjetas, filas y pendientes aparecen en cascada. */
-.tarjeta {
-  animation: entrar 0.35s ease-out backwards;
-  animation-delay: calc(0.1s + var(--i, 0) * 50ms);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.tarjeta:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgb(0 0 0 / 0.08); }
-table tr, div.pendiente {
-  animation: aparecer 0.3s ease-out backwards;
-  animation-delay: calc(0.1s + var(--i, 0) * 25ms);
-}
-details[open] > :not(summary) { animation: entrar 0.25s ease-out; }
-
-/* Barras: crecen desde su inicio. Columnas del gráfico: suben desde la base, una tras otra. */
-td.barra span {
-  transform-origin: left center;
-  animation: crecer-x 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
-  animation-delay: calc(0.15s + var(--i, 0) * 40ms);
-}
+/* Datos: las barras se dibujan de izquierda a derecha y las columnas suben desde la base;
+   la cifra de la columna resaltada aparece cuando su columna termina de subir. */
+td.barra span { animation: revelar-x calc(0.5s + var(--i, 0) * 40ms) cubic-bezier(0.2, 0.7, 0.2, 1); }
 section.grafico .columna path {
   transform-box: fill-box;
   transform-origin: 50% 100%;
-  animation: crecer-y 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
-  animation-delay: calc(0.1s + var(--i, 0) * 35ms);
+  animation: crecer-y calc(0.45s + var(--i, 0) * 35ms) cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-section.grafico .columna .valor { animation: aparecer 0.3s 0.6s ease-out backwards; }
+section.grafico .columna .valor { animation: aparecer-al-final 0.9s ease-out; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
