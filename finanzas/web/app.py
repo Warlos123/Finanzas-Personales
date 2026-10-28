@@ -18,13 +18,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from finanzas import (
-    alertas, catalogos, db, formato, graficos, ingesta, metricas, movimientos, recurrentes, reglas,
-    suscripciones, tipo_cambio,
+    alertas, catalogos, db, estado_cuenta, formato, graficos, ingesta, metricas, movimientos,
+    reconciliacion, recurrentes, reglas, suscripciones, tipo_cambio,
 )
 from finanzas.tiempo import ZONA_CR, ahora_iso
 
 PUERTO = 8765
 DIR_WEB = Path(__file__).parent
+TAMANO_MAXIMO_PDF = 10 * 1024 * 1024
 
 
 def _hoy():
@@ -138,6 +139,7 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
     plantillas = Jinja2Templates(directory=DIR_WEB / "templates")
     plantillas.env.filters["monto"] = formato.formatear_monto
     plantillas.env.filters["fecha_corta"] = formato.fecha_corta
+    plantillas.env.filters["fecha_dia"] = formato.fecha_dia
     plantillas.env.filters["fecha_form"] = formato.fecha_a_formulario
     plantillas.env.filters["centimos_texto"] = formato.centimos_a_texto
     plantillas.env.filters["porcentaje"] = formato.porcentaje
@@ -419,6 +421,62 @@ def crear_app(ruta_db, puerto: int = PUERTO) -> FastAPI:
             with conn:
                 recurrentes.borrar(conn, recurrente_id)
         return _redirigir("/ingresos", msg="Recurrente borrado (los ingresos ya generados se quedan)")
+
+    # --- Reconciliación con el estado de cuenta ---
+
+    @app.get("/reconciliar")
+    def lista_estados(request: Request):
+        with abrir() as conn:
+            return mostrar(request, conn, "reconciliar.html", "reconciliar", estados=reconciliacion.listar(conn))
+
+    @app.post("/reconciliar")
+    async def subir_estado(request: Request):
+        formulario = await request.form()
+        archivo = formulario.get("archivo")
+        if archivo is None or isinstance(archivo, str):
+            return _redirigir("/reconciliar", error="Elige el PDF del estado de cuenta")
+        contenido = await archivo.read(TAMANO_MAXIMO_PDF + 1)
+        if len(contenido) > TAMANO_MAXIMO_PDF:
+            return _redirigir("/reconciliar", error="El archivo es demasiado grande")
+        try:
+            texto = estado_cuenta.texto_de_pdf(contenido)
+            with abrir() as conn:
+                with conn:
+                    estado_id = reconciliacion.guardar(conn, texto)
+        except ValueError as error:
+            return _redirigir("/reconciliar", error=str(error))
+        return _redirigir(f"/reconciliar/{estado_id}")
+
+    @app.get("/reconciliar/{estado_id}")
+    def ver_reconciliacion(request: Request, estado_id: int):
+        with abrir() as conn:
+            estado = reconciliacion.obtener(conn, estado_id)
+            if estado is None:
+                return _redirigir("/reconciliar", error="Ese estado de cuenta no existe")
+            return mostrar(
+                request, conn, "reconciliacion.html", "reconciliar", estado_id=estado_id,
+                r=reconciliacion.reconciliar(conn, estado), tipos=movimientos.TIPOS,
+            )
+
+    @app.post("/reconciliar/{estado_id}")
+    async def agregar_desde_estado(request: Request, estado_id: int):
+        formulario = await request.form()
+        indices = formulario.getlist("indice")
+        elecciones = []
+        for i in range(len(indices)):
+            if formulario.get(f"agregar_{indices[i]}") == "1":
+                elecciones.append((int(indices[i]), formulario.get(f"tipo_{indices[i]}", "")))
+        ruta = f"/reconciliar/{estado_id}"
+        try:
+            with abrir() as conn:
+                estado = reconciliacion.obtener(conn, estado_id)
+                if estado is None:
+                    return _redirigir("/reconciliar", error="Ese estado de cuenta no existe")
+                with conn:
+                    agregadas, ignoradas = reconciliacion.agregar(conn, estado, elecciones)
+        except ValueError as error:
+            return _redirigir(ruta, error=str(error))
+        return _redirigir(ruta, msg=f"{agregadas} agregadas, {ignoradas} ignoradas")
 
     # --- Reglas ---
 

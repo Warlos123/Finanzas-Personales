@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block titulo %}Finanzas · Reconciliar{% endblock %}
+{% macro monto_mov(m) -%}
+{% if m.credito %}+{% endif %}{{ m.monto_centimos | monto(r.estado.moneda) }}
+{%- endmacro %}
+{% block contenido %}
+<p><a href="/reconciliar">← Estados de cuenta</a></p>
+<h1>Estado de cuenta del {{ r.estado.desde | fecha_dia }} al {{ r.estado.hasta | fecha_dia }}</h1>
+
+<div class="tarjetas">
+  <div class="tarjeta"><span>Coinciden</span><strong>{{ r.coinciden | length }}</strong></div>
+  <div class="tarjeta"><span>En el banco, no en la app</span><strong>{{ r.faltan | length }}</strong></div>
+  <div class="tarjeta"><span>En la app, no en el banco</span><strong>{{ r.solo_en_app | length }}</strong></div>
+  {% if r.montos_distintos %}<div class="tarjeta"><span>Montos distintos</span><strong>{{ r.montos_distintos | length }}</strong></div>{% endif %}
+</div>
+
+<h2>En el banco pero no en la app</h2>
+{% if r.faltan %}
+<p class="tenue">Marca los que quieras agregar y guarda una vez. Los créditos se proponen como ingreso; si alguien te devolvió plata,
+elige "reembolsable". "Ignorar" lo guarda sin contarlo, para que no vuelva a aparecer.</p>
+<form method="post" action="/reconciliar/{{ estado_id }}">
+<table class="lista">
+  <thead><tr><th><label class="check"><input type="checkbox" title="Marcar todos"
+      onchange="var cs = this.form.querySelectorAll('input[name^=agregar_]'); for (var i = 0; i < cs.length; i++) { cs[i].checked = this.checked; }"> Agregar</label></th>
+    <th>Fecha</th><th>Movimiento</th><th>Detalle</th><th class="num">Monto</th><th>Como</th></tr></thead>
+  {% for l in r.faltan %}
+  <tr>
+    <td><input type="hidden" name="indice" value="{{ l.indice }}">
+        <input type="checkbox" name="agregar_{{ l.indice }}" value="1" aria-label="Agregar"></td>
+    <td>{{ l.movimiento.fecha | fecha_dia }}</td>
+    <td class="tenue">{{ l.movimiento.tipo }}{% if l.movimiento.tarjeta %} ****{{ l.movimiento.tarjeta }}{% endif %}</td>
+    <td>{{ l.movimiento.texto or "—" }}</td>
+    <td class="num">{{ monto_mov(l.movimiento) }}</td>
+    <td><select name="tipo_{{ l.indice }}">
+      {% for t in tipos %}<option value="{{ t }}"{% if t == l.tipo_sugerido %} selected{% endif %}>{{ t }}</option>{% endfor %}
+      <option value="ignorar">ignorar (no contar)</option>
+    </select></td>
+  </tr>
+  {% endfor %}
+</table>
+<p><button>Guardar</button></p>
+</form>
+{% else %}
+<p class="tenue">Todo lo del estado de cuenta ya está en la app.</p>
+{% endif %}
+
+<h2>En la app pero no en el banco</h2>
+{% if r.solo_en_app %}
+<p class="tenue">Compras con las tarjetas del estado y SINPE del período que el banco no muestra. Las de los últimos días del período
+pueden salir en el estado del mes siguiente.</p>
+<table class="lista">
+  <thead><tr><th>Fecha</th><th>Cuenta</th><th>Comercio o destinatario</th><th class="num">Monto</th><th></th></tr></thead>
+  {% for t in r.solo_en_app %}
+  <tr>
+    <td>{{ t.fecha_hora | fecha_corta }}</td>
+    <td>{{ t.cuenta_nombre or "—" }}</td>
+    <td>{{ t.comercio_o_destinatario or t.descripcion or "—" }}</td>
+    <td class="num">{{ t.monto_centimos | monto(t.moneda) }}</td>
+    <td><a href="/transacciones/{{ t.id }}?volver=/reconciliar/{{ estado_id }}">editar</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="tenue">Nada: todo lo de la app en este período aparece en el estado.</p>
+{% endif %}
+
+{% if r.montos_distintos %}
+<h2>Misma compra, otro monto</h2>
+<table class="lista">
+  <thead><tr><th>Fecha</th><th>Detalle</th><th class="num">En el banco</th><th class="num">En la app</th><th></th></tr></thead>
+  {% for l in r.montos_distintos %}
+  <tr>
+    <td>{{ l.movimiento.fecha | fecha_dia }}</td>
+    <td>{{ l.movimiento.texto or "—" }}</td>
+    <td class="num">{{ l.movimiento.monto_centimos | monto(r.estado.moneda) }}</td>
+    <td class="num">{{ l.transaccion.monto_centimos | monto(l.transaccion.moneda) }}</td>
+    <td><a href="/transacciones/{{ l.transaccion.id }}?volver=/reconciliar/{{ estado_id }}">editar</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<details>
+  <summary>Coinciden ({{ r.coinciden | length }})</summary>
+  <table class="lista">
+    {% for l in r.coinciden %}
+    <tr><td>{{ l.movimiento.fecha | fecha_dia }}</td><td>{{ l.movimiento.texto or l.movimiento.tipo }}</td><td class="num">{{ monto_mov(l.movimiento) }}</td></tr>
+    {% endfor %}
+  </table>
+</details>
+{% if r.internos %}
+<details>
+  <summary>Movimientos internos ({{ r.internos | length }}): CDP y paso a la tarjeta virtual, no se proponen</summary>
+  <table class="lista">
+    {% for l in r.internos %}
+    <tr><td>{{ l.movimiento.fecha | fecha_dia }}</td><td>{{ l.movimiento.tipo }}</td><td class="num">{{ monto_mov(l.movimiento) }}</td></tr>
+    {% endfor %}
+  </table>
+</details>
+{% endif %}
+{% endblock %}

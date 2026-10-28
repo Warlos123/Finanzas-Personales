@@ -310,3 +310,33 @@ def test_tipo_de_cambio_a_mano_no_se_pisa_el_mismo_dia(cliente, ruta):
         assert db.leer_ajuste(conn, "tipo_cambio_usd") == "510"
     finally:
         conn.close()
+
+
+def test_reconciliar_subir_ver_y_agregar(cliente, ruta, monkeypatch):
+    from finanzas import estado_cuenta
+
+    monkeypatch.setattr(estado_cuenta, "texto_de_pdf", lambda contenido: leer_fixture("estado_cuenta/ahorros_octubre.txt"))
+    assert "Subir y comparar" in cliente.get("/reconciliar").text
+    sin_archivo = cliente.post("/reconciliar", data={}, headers=ORIGEN)
+    assert "Elige el PDF" in sin_archivo.text
+
+    respuesta = cliente.post(
+        "/reconciliar", files={"archivo": ("estado.pdf", b"%PDF-1.7 ficticio", "application/pdf")},
+        headers=ORIGEN, follow_redirects=False,
+    )
+    assert respuesta.status_code == 303
+    destino = respuesta.headers["location"]
+    pagina = cliente.get(destino).text
+    assert "Estado de cuenta del 01/10/2026 al 31/10/2026" in pagina
+    assert "SALARIO OCTUBRE" in pagina and "PARQUEO CENTRAL" in pagina
+    assert "Misma compra, otro monto" in pagina
+    assert "80000000" not in pagina  # el teléfono del detalle del SINPE no se muestra
+
+    guardado = cliente.post(
+        destino, data={"indice": ["0", "4"], "agregar_0": "1", "tipo_0": "ingreso", "tipo_4": "gasto"},
+        headers=ORIGEN,
+    )
+    assert "1 agregadas, 0 ignoradas" in guardado.text
+    assert _consultar(ruta, "SELECT COUNT(*) FROM transactions WHERE llave_unica LIKE 'estado:%'")[0][0] == 1
+    assert "01/10/2026 al 31/10/2026" in cliente.get("/reconciliar").text
+    assert "no existe" in cliente.get("/reconciliar/999").text

@@ -1,0 +1,65 @@
+                                                                 Estado de Cuenta
+                                                                         VISA / MASTERCARD
+Cédula Jurídica : 4-000-000019
+
+Sr (a) :        PERSONA DE PRUEBA
+
+CR00000000000000000000                                                                             Período de Corte
+                                                                                                   01/10/2026 al 31/10/2026
+Cuenta IBAN
+                                                                                                   Ciclo de Corte : 5
+000-0000000- 0 COLONES
+
+Cuenta de Ahorros
+
+                                                                                    Saldo Anterior :                                                500,000.00
+
+
+  Fecha          Fecha
+Movimiento      Contable      Tarjeta      Documento                            Concepto                                Monto Débito           Monto Crédito
+01/10/26         01/10/26                             1000001 TRANSFERENC BANCOBCR - SALARIO OCTUBRE                                                300,000.00
+
+06/10/26         06/10/26                            20000001 CUPONES CDPS ELECTR - CDP Bancobcr.com 66000001-25                                        250.00
+
+08/10/26         08/10/26                             3000001 EMISION CDP BANCOBCR - CONTA MEDIOS ELECTRONICOS               200,000.00
+
+16/10/26         16/10/26                                4321 SERV ADMIN VISA AH - APERT CTAS CTES Y AHORROS S                   500.00
+
+20/10/26         21/10/26        4321           77777 COMPRAS EN COMERCIOS - 01880055 +002PARQUEO CENTRAL                        800.00
+
+22/10/26         22/10/26                            40000001 MONEDERO SINPE MOVIL - 80000000-Almuerzo*****                    2,500.00
+
+23/10/26         23/10/26                            50000001 SINPE MOVIL OTRA ENT - 0-ana-0                                                          3,000.00
+
+Pág. 1 de 2                                                                                                                                10/31/2026 5:08:06 PM
+
+                                                                 Estado de Cuenta
+                                                                         VISA / MASTERCARD
+Cédula Jurídica : 4-000-000019
+
+Sr (a) :        PERSONA DE PRUEBA
+
+CR00000000000000000000                                                                             Período de Corte
+                                                                                                   01/10/2026 al 31/10/2026
+Cuenta IBAN
+                                                                                                   Ciclo de Corte : 5
+000-0000000- 0 COLONES
+
+Cuenta de Ahorros
+
+  Fecha          Fecha
+Movimiento      Contable      Tarjeta      Documento                            Concepto                                    Monto Débito           Monto Crédito
+24/10/26         25/10/26        4321          200001 COMPRAS EN COMERCIOS - 01880055 +002SUPERMERCADO EJ                         12,345.50
+
+24/10/26         26/10/26        4321          200002 COMPRAS EN COMERCIOS - 4840005105 +002SERVICIO STREAM                        5,094.90
+
+25/10/26         27/10/26        4321          200004 COMPRAS EN COMERCIOS - 01880055 +002SODA LA ESQUINA                          1,600.00
+
+26/10/26         28/10/26        4321          123456 COMPRAS EN COMERCIOS - 01880055 +002SINPE TP                                   710.00
+
+30/10/26         30/10/26                               60001 INTS GANADOS AHORROS - OFICINA CENTRAL         (S)                                            512.34
+
+                                                        ---------- Última línea ----------
+                                                                                              Débitos / Créditos:               223,550.40               303,762.34
+                                                                                             Saldo Final :                                              580,211.94
+Pág. 2 de 2                                                                                                                                10/31/2026 5:08:06 PM

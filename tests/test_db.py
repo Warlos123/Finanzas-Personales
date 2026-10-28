@@ -8,7 +8,7 @@ def test_migraciones_crean_todas_las_tablas(conn):
         nombres.add(filas[i]["name"])
     esperadas = {
         "raw_events", "transactions", "accounts", "categories", "rules",
-        "recurring_incomes", "budgets", "import_runs", "settings",
+        "recurring_incomes", "budgets", "import_runs", "settings", "bank_statements",
     }
     assert esperadas <= nombres
 

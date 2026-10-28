@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titulo %}Finanzas · Reconciliar{% endblock %}
+{% block contenido %}
+<h1>Reconciliar con el estado de cuenta</h1>
+<p class="tenue">Sube el PDF del estado de cuenta de ahorros que descargas del BCR. La app lo compara con lo que ya tiene:
+las compras por número de autorización y lo demás por monto y fecha. Después eliges qué agregar.
+El PDF no se guarda: solo los movimientos, en tu base local.</p>
+
+<form method="post" action="/reconciliar" enctype="multipart/form-data" class="filtros">
+  <label>Estado de cuenta (PDF) <input type="file" name="archivo" accept="application/pdf,.pdf" required></label>
+  <button>Subir y comparar</button>
+</form>
+
+{% if estados %}
+<h2>Estados subidos</h2>
+<table class="lista">
+  <thead><tr><th>Período</th><th>Subido</th><th></th></tr></thead>
+  {% for e in estados %}
+  <tr>
+    <td>{{ e.desde | fecha_dia }} al {{ e.hasta | fecha_dia }}</td>
+    <td>{{ e.creado_en | fecha_corta }}</td>
+    <td><a href="/reconciliar/{{ e.id }}">ver diferencias</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% endblock %}

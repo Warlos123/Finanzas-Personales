@@ -62,6 +62,11 @@ def fecha_corta(iso: str) -> str:
     return datetime.fromisoformat(iso).astimezone(ZONA_CR).strftime("%d/%m %H:%M")
 
 
+def fecha_dia(iso: str) -> str:
+    """'2026-10-20' (o un ISO con hora) -> '20/10/2026', sin convertir de zona horaria."""
+    return f"{iso[8:10]}/{iso[5:7]}/{iso[:4]}"
+
+
 def mes_valido(texto: str | None) -> bool:
     return texto is not None and _PATRON_MES.match(texto) is not None
 
